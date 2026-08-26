@@ -31,7 +31,7 @@ object BloomFilter:
   def optimalNumberOfHashes(numberOfItems: Long, numberOfBits: Long): Int =
     require(numberOfItems > 0, "numberOfItems must be positive")
     require(numberOfBits > 0, "numberOfBits must be positive")
-    math.max(1, math.ceil(numberOfBits.toDouble / numberOfItems * math.log(2)).toInt)
+    math.max(1, math.round(numberOfBits.toDouble / numberOfItems * math.log(2)).toInt)
 
   private def validateConstructionArguments(
       numberOfItems: Long,
