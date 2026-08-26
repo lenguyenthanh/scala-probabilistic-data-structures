@@ -39,7 +39,7 @@ class BloomFilterSpec extends munit.FunSuite:
     given Hash[Long] with
       override def hash(from: Long): Long = from
 
-    val filter = new BloomFilterImpl[Long](bits.size, 17, bits)
+    val filter = new BloomFilterImpl[Long](17, bits)
     List(Long.MinValue, Long.MinValue + 1, -1L, 0L, 1L, Long.MaxValue).foreach: hash =>
       filter.add(hash)
       assert(filter.mightContain(hash))

@@ -12,8 +12,11 @@ final class BitArrayLaws(create: Long => BitArray):
         case closeable: AutoCloseable => closeable.close()
         case _                        => ()
 
-  def reportsRequestedSize(size: Long): Boolean =
-    withBits(size)(_.size == size)
+  def roundsSizeUpToWholeWords(minSize: Long): Boolean =
+    withBits(minSize): bits =>
+      bits.size >= minSize &&
+        bits.size % java.lang.Long.SIZE == 0 &&
+        bits.size - minSize < java.lang.Long.SIZE
 
   def startsEmpty(size: Long, indices: List[Long]): Boolean =
     withBits(size): bits =>
@@ -44,7 +47,7 @@ final class BitArrayLaws(create: Long => BitArray):
       indices.foreach(bits.set)
       bits.nonEmptyBits == indices.distinct.size.toLong
 
-  def addressesLastValidIndex(size: Long): Boolean =
-    withBits(size): bits =>
-      bits.set(size - 1)
-      bits.get(size - 1) && bits.nonEmptyBits == 1L
+  def addressesLastValidIndex(minSize: Long): Boolean =
+    withBits(minSize): bits =>
+      bits.set(bits.size - 1)
+      bits.get(bits.size - 1) && bits.nonEmptyBits == 1L

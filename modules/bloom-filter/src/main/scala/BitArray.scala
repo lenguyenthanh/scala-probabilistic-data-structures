@@ -7,14 +7,14 @@ trait BitArray:
   def nonEmptyBits: Long
 
 object BitArray:
-  def instance(numberOfBits: Long): BitArray =
-    new internal.OnHeapBitArray(numberOfBits)
+  def instance(minNumberOfBits: Long): BitArray =
+    new internal.OnHeapBitArray(minNumberOfBits)
 
 trait OffHeapBitArray extends BitArray, AutoCloseable
 
 private[bloomfilter] object OffHeapBitArray:
   private val hasForeignMemory: Boolean = Runtime.version().feature() >= 22
 
-  def instance(numberOfBits: Long): OffHeapBitArray =
-    if hasForeignMemory then new internal.ForeignMemoryBitArray(numberOfBits)
-    else new internal.UnsafeBitArray(numberOfBits)
+  def instance(minNumberOfBits: Long): OffHeapBitArray =
+    if hasForeignMemory then new internal.ForeignMemoryBitArray(minNumberOfBits)
+    else new internal.UnsafeBitArray(minNumberOfBits)
