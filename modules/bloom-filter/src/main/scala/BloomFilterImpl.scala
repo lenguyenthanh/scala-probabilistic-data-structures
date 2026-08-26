@@ -13,29 +13,42 @@ private[bloomfilter] class BloomFilterImpl[T](
     extends BloomFilter[T]:
 
   override def add(x: T): Unit =
-    val hash  = hashFor.hash(x)
-    val hash1 = hash >>> 32
-    val hash2 = (hash << 32) >> 32
+    var h1 = hashFor.hash(x)
+    val h2 = h1 * BloomFilterImpl.hashMagic
+    bits.set(index(h1))
 
-    var i = 0
+    var i = 1
     while i < numberOfHashes do
-      bits.set(index(hash1, hash2, i))
+      h1 = nextHash(h1, h2)
+      bits.set(index(h1))
       i += 1
 
   override def mightContain(x: T): Boolean =
-    val hash  = hashFor.hash(x)
-    val hash1 = hash >>> 32
-    val hash2 = (hash << 32) >> 32
-
-    var i      = 0
-    var result = true
-    while i < numberOfHashes && result do
-      if !bits.get(index(hash1, hash2, i)) then result = false
-      i += 1
-    result
+    var h1 = hashFor.hash(x)
+    if !bits.get(index(h1)) then false
+    else
+      val h2     = h1 * BloomFilterImpl.hashMagic
+      var i      = 1
+      var result = true
+      while i < numberOfHashes && result do
+        h1 = nextHash(h1, h2)
+        result = bits.get(index(h1))
+        i += 1
+      result
 
   def expectedFalsePositiveRate(): Double =
     java.lang.Math.pow(bits.nonEmptyBits.toDouble / numberOfBits, numberOfHashes.toDouble)
 
-  private inline def index(hash1: Long, hash2: Long, iteration: Int): Long =
-    ((hash1 + iteration * hash2) & Long.MaxValue) % numberOfBits
+  private inline def index(hash: Long): Long =
+    // Maps hash into [0, numberOfBits). Wants entropy across all 64 bits.
+    // From https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+    // via https://github.com/tomtomwombat/fastbloom/blob/5bbfc14f98b4fc4cd5a124626174fdf54e0b0c3d/src/lib.rs#L398
+    java.lang.Math.unsignedMultiplyHigh(hash, numberOfBits)
+
+  private inline def nextHash(h1: Long, h2: Long): Long =
+    // From https://www.eecs.harvard.edu/~michaelm/postscripts/rsa2008.pdf via
+    // https://github.com/tomtomwombat/fastbloom/blob/5bbfc14f98b4fc4cd5a124626174fdf54e0b0c3d/src/hasher.rs#L209
+    java.lang.Long.rotateLeft(h1, 5) + h2
+
+private object BloomFilterImpl:
+  private inline val hashMagic = 0x517cc1b727220a95L

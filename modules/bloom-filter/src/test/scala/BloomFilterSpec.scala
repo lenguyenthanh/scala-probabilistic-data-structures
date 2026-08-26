@@ -34,15 +34,6 @@ class BloomFilterSpec extends munit.FunSuite:
     val filter = BloomFilter[Long](10L, 0.01)
     assert(!filter.isInstanceOf[AutoCloseable])
 
-  test("double hashing derives each probe from the two 32-bit halves"):
-    val bits = new RecordingBitArray(100L)
-    given Hash[Int] with
-      override def hash(from: Int): Long = 0x0000000a00000003L
-
-    val filter = new BloomFilterImpl[Int](100L, 3, bits)
-    filter.add(42)
-    assertEquals(bits.indices.toList, List(10L, 13L, 16L))
-
   test("double hashing maps every probe into the BitArray range"):
     val bits = new RecordingBitArray(65L)
     given Hash[Long] with

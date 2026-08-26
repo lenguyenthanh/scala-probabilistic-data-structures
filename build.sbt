@@ -9,9 +9,8 @@ ThisBuild / organizationName  := "Thanh Le"
 ThisBuild / developers        := List(
   tlGitHubDev("lenguyenthanh", "Thanh Le")
 )
-
 ThisBuild / githubWorkflowJavaVersions := Seq(
-  JavaSpec.temurin("17"),
+  JavaSpec.temurin("18"),
   JavaSpec.temurin("21"),
   JavaSpec.temurin("25")
 )
@@ -21,10 +20,10 @@ ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowBuild += WorkflowStep.Sbt(
   List("check"),
   name = Some("Check formatting and Scalafix"),
-  cond = Some("matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'")
+  cond = Some("matrix.java == 'temurin@25' && matrix.os == 'ubuntu-22.04'")
 )
 
-ThisBuild / tlJdkRelease    := Some(17)
+ThisBuild / tlJdkRelease    := Some(18)
 ThisBuild / tlFatalWarnings := true
 
 lazy val bloomFilter = project
