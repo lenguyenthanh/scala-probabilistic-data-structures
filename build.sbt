@@ -1,12 +1,31 @@
-inThisBuild(
-  Seq(
-    scalaVersion  := "3.3.8",
-    versionScheme := Some("early-semver"),
-    version       := "0.0.1",
-    scalacOptions ++= Seq("-Wall", "-Yfuture-lazy-vals", "-java-output-version", "17"),
-    resolvers ++= Seq("lila-maven".at("https://raw.githubusercontent.com/lichess-org/lila-maven/master"))
-  )
+ThisBuild / tlBaseVersion      := "0.0"
+ThisBuild / scalaVersion       := "3.3.8"
+ThisBuild / crossScalaVersions := Seq("3.3.8")
+ThisBuild / versionScheme      := Some("early-semver")
+ThisBuild / scalacOptions += "-Yfuture-lazy-vals"
+ThisBuild / semanticdbEnabled := true
+ThisBuild / organization      := "se.thanh"
+ThisBuild / organizationName  := "Thanh Le"
+ThisBuild / developers        := List(
+  tlGitHubDev("lenguyenthanh", "Thanh Le")
 )
+
+ThisBuild / githubWorkflowJavaVersions := Seq(
+  JavaSpec.temurin("17"),
+  JavaSpec.temurin("21"),
+  JavaSpec.temurin("25")
+)
+ThisBuild / tlCiMimaBinaryIssueCheck            := true
+ThisBuild / tlCiDependencyGraphJob              := false
+ThisBuild / githubWorkflowPublishTargetBranches := Seq()
+ThisBuild / githubWorkflowBuild += WorkflowStep.Sbt(
+  List("check"),
+  name = Some("Check formatting and Scalafix"),
+  cond = Some("matrix.java == 'temurin@17' && matrix.os == 'ubuntu-22.04'")
+)
+
+ThisBuild / tlJdkRelease    := Some(17)
+ThisBuild / tlFatalWarnings := true
 
 lazy val bloomFilter = project
   .in(file("modules/bloom-filter"))
@@ -24,7 +43,7 @@ lazy val bloomFilter = project
 lazy val benchmark = project
   .in(file("modules/benchmark"))
   .dependsOn(bloomFilter)
-  .enablePlugins(JmhPlugin)
+  .enablePlugins(JmhPlugin, NoPublishPlugin)
   .settings(
     name := "benchmark",
     resolvers ++= Seq("lila-maven".at("https://raw.githubusercontent.com/lichess-org/lila-maven/master")),
@@ -36,9 +55,9 @@ lazy val benchmark = project
 
 lazy val root = project
   .in(file("."))
+  .enablePlugins(NoPublishPlugin)
   .settings(
-    name    := "Scala probabilistic data structures",
-    version := "0.1.0-SNAPSHOT"
+    name := "Scala probabilistic data structures"
   )
   .aggregate(bloomFilter, benchmark)
 
