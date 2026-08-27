@@ -11,6 +11,7 @@ private[bloomfilter] class BloomFilterImpl[T](
     private val bits: BitArray
 )(using hashFor: Hash[T])
     extends BloomFilter[T]:
+
   override def add(x: T): Unit =
     val hash  = hashFor.hash(x)
     val hash1 = hash >>> 32

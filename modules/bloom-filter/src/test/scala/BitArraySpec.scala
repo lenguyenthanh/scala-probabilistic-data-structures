@@ -5,9 +5,8 @@ import laws.BitArrayTests
 
 class BitArraySpec extends munit.DisciplineSuite:
 
-  /* `ForeignMemoryBitArray` cannot be loaded below JDK 22, so it is only added where it can run. */
   private val hasForeignMemory: Boolean = Runtime.version().feature() >= 22
-  private val hasUnsafe: Boolean        = Runtime.version().feature() > 25
+  private val hasUnsafe: Boolean        = Runtime.version().feature() < 22
 
   private val Storages: List[(String, Long => BitArray)] =
     List[(String, Long => BitArray)]("on-heap" -> (new OnHeapBitArray(_)))
