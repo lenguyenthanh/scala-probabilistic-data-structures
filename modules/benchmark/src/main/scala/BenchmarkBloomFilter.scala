@@ -2,6 +2,9 @@ package se.thanh.pds.bloomfilter
 
 object BenchmarkBloomFilter:
 
+  def onHeap[T: Hash](numberOfBits: Long, numberOfHashes: Int): BloomFilter[T] =
+    new BloomFilterImpl[T](numberOfBits, numberOfHashes, BitArray.instance(numberOfBits))
+
   def foreignMemory[T: Hash](numberOfItems: Long, falsePositiveRate: Double): OffHeapBloomFilter[T] =
     require(Runtime.version().feature() >= 22, "foreign memory benchmarks require JDK 22 or newer")
     offHeap(numberOfItems, falsePositiveRate)(new internal.ForeignMemoryBitArray(_))
