@@ -1,13 +1,15 @@
 package se.thanh.pds.bloomfilter
 
+/**
+ * The implementation is based on https://github.com/alexandrnikitin/bloom-filter-scala
+ * Copyright 2026 Alex Nikitin
+ * Licensed under the Mit License.
+ */
+
 import se.thanh.pds.bloomfilter.internal.hashing.MurmurHash3
 
 import java.lang.invoke.{ MethodHandles, VarHandle }
 
-/**
- * This is adapted from original version by Alex Nikitin in
- * https://github.com/alexandrnikitin/bloom-filter-scala.
- */
 trait Hash[A]:
   def hash(from: A): Long
 

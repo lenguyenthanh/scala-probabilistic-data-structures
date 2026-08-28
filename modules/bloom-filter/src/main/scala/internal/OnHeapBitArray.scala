@@ -2,8 +2,9 @@ package se.thanh.pds.bloomfilter
 package internal
 
 /**
- * This is adapted from original version by Alex Nikitin in
- * https://github.com/alexandrnikitin/bloom-filter-scala.
+ * The implementation is based on https://github.com/alexandrnikitin/bloom-filter-scala
+ * Copyright 2026 Alex Nikitin
+ * Licensed under the Mit License.
  */
 
 /* Array backed BitArray implementation */
