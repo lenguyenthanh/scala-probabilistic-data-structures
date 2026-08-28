@@ -17,8 +17,8 @@ private[bloomfilter] object MurmurHash3:
       ByteOrder.LITTLE_ENDIAN
     )
 
-  private val c1: Long = 0x87c37b91114253d5L
-  private val c2: Long = 0x4cf5ad432745937fL
+  private inline val c1 = 0x87c37b91114253d5L
+  private inline val c2 = 0x4cf5ad432745937fL
 
   def fmix64(l: Long): Long =
     var k = l
