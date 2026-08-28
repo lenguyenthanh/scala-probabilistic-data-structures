@@ -28,13 +28,13 @@ final class BitArrayTests private (create: Long => BitArray) extends Laws:
     new DefaultRuleSet(
       name = "bitArray",
       parent = None,
-      "reports the requested size"     -> Prop.forAll(sizeGen)(laws.reportsRequestedSize),
-      "starts empty"                   -> Prop.forAll(sizeAndIndicesGen)(laws.startsEmpty),
-      "reads every set index"          -> Prop.forAll(sizeAndIndicesGen)(laws.readsSetIndices),
-      "setting one index is isolated"  -> Prop.forAll(sizeAndIndexGen)(laws.settingOneIndexIsIsolated),
-      "setting indices is idempotent"  -> Prop.forAll(sizeAndIndicesGen)(laws.settingIndicesIsIdempotent),
-      "counts distinct set indices"    -> Prop.forAll(sizeAndIndicesGen)(laws.countsDistinctSetIndices),
-      "addresses the last valid index" -> Prop.forAll(sizeGen)(laws.addressesLastValidIndex)
+      "rounds the size up to whole words" -> Prop.forAll(sizeGen)(laws.roundsSizeUpToWholeWords),
+      "starts empty"                      -> Prop.forAll(sizeAndIndicesGen)(laws.startsEmpty),
+      "reads every set index"             -> Prop.forAll(sizeAndIndicesGen)(laws.readsSetIndices),
+      "setting one index is isolated"     -> Prop.forAll(sizeAndIndexGen)(laws.settingOneIndexIsIsolated),
+      "setting indices is idempotent"     -> Prop.forAll(sizeAndIndicesGen)(laws.settingIndicesIsIdempotent),
+      "counts distinct set indices"       -> Prop.forAll(sizeAndIndicesGen)(laws.countsDistinctSetIndices),
+      "addresses the last valid index"    -> Prop.forAll(sizeGen)(laws.addressesLastValidIndex)
     )
 
 object BitArrayTests:

@@ -7,10 +7,10 @@ package internal
  */
 
 /* Array backed BitArray implementation */
-final private[bloomfilter] class OnHeapBitArray(val size: Long) extends BitArray:
-  require(size > 0, "size must be positive")
+final private[bloomfilter] class OnHeapBitArray(minNumberOfBits: Long) extends BitArray:
+  require(minNumberOfBits > 0, "minNumberOfBits must be positive")
 
-  private val numberOfWords = (size - 1) / java.lang.Long.SIZE + 1
+  private val numberOfWords = (minNumberOfBits - 1) / java.lang.Long.SIZE + 1
   require(
     numberOfWords <= Int.MaxValue,
     s"an on-heap bit array cannot contain $numberOfWords words"
@@ -18,6 +18,8 @@ final private[bloomfilter] class OnHeapBitArray(val size: Long) extends BitArray
 
   private val words    = new Array[Long](numberOfWords.toInt)
   private var bitCount = 0L
+
+  override val size: Long = numberOfWords * java.lang.Long.SIZE
 
   override def get(index: Long): Boolean =
     val word = words((index >>> 6).toInt)

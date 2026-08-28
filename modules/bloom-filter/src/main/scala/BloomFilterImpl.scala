@@ -6,11 +6,12 @@ package se.thanh.pds.bloomfilter
  */
 
 private[bloomfilter] class BloomFilterImpl[T](
-    val numberOfBits: Long,
     val numberOfHashes: Int,
     private val bits: BitArray
 )(using hashFor: Hash[T])
     extends BloomFilter[T]:
+
+  val numberOfBits: Long = bits.size
 
   override def add(x: T): Unit =
     var h1 = hashFor.hash(x)

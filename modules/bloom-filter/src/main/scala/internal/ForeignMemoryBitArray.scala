@@ -4,14 +4,16 @@ package internal
 import java.lang.invoke.VarHandle
 import scala.annotation.static
 
-final private[bloomfilter] class ForeignMemoryBitArray(val size: Long) extends OffHeapBitArray:
-  require(size > 0, "size must be positive")
+final private[bloomfilter] class ForeignMemoryBitArray(minNumberOfBits: Long) extends OffHeapBitArray:
+  require(minNumberOfBits > 0, "minNumberOfBits must be positive")
 
-  private val numberOfWords = (size - 1) / java.lang.Long.SIZE + 1
+  private val numberOfWords = (minNumberOfBits - 1) / java.lang.Long.SIZE + 1
   private val memory        = ForeignMemoryBitArray.allocate(numberOfWords)
   private val arena         = memory.arena
   private val segment       = memory.segment
   private var bitCount      = 0L
+
+  override val size: Long = numberOfWords * java.lang.Long.SIZE
 
   import ForeignMemoryBitArray.word
   override def get(index: Long): Boolean =

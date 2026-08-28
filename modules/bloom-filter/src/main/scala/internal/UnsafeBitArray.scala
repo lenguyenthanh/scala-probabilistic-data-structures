@@ -11,18 +11,20 @@ import sun.misc.Unsafe as JUnsafe
 import scala.util.Try
 
 // Unsafe implementation
-final private[bloomfilter] class UnsafeBitArray(val size: Long) extends OffHeapBitArray:
+final private[bloomfilter] class UnsafeBitArray(minNumberOfBits: Long) extends OffHeapBitArray:
   import UnsafeBitArray.unsafe
 
-  require(size > 0, "size must be positive")
+  require(minNumberOfBits > 0, "minNumberOfBits must be positive")
 
-  private val numberOfWords = (size - 1) / java.lang.Long.SIZE + 1
+  private val numberOfWords = (minNumberOfBits - 1) / java.lang.Long.SIZE + 1
   private val numberOfBytes = java.lang.Long.BYTES * numberOfWords
   private val pointer       = unsafe.allocateMemory(numberOfBytes)
   unsafe.setMemory(pointer, numberOfBytes, 0.toByte)
 
   private var bitCount = 0L
   private var closed   = false
+
+  override val size: Long = numberOfWords * java.lang.Long.SIZE
 
   override def get(index: Long): Boolean =
     val value = unsafe.getLong(pointer + index.wordByteOffset)

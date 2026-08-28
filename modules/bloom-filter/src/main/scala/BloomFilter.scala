@@ -10,18 +10,12 @@ trait OffHeapBloomFilter[T] extends BloomFilter[T], AutoCloseable
 object BloomFilter:
 
   def apply[T: Hash](numberOfItems: Long, falsePositiveRate: Double): BloomFilter[T] =
-    val numberOfBits   = optimalNumberOfBits(numberOfItems, falsePositiveRate)
-    val numberOfHashes = optimalNumberOfHashes(numberOfItems, numberOfBits)
-    new BloomFilterImpl[T](numberOfBits, numberOfHashes, BitArray.instance(numberOfBits))
+    val bits = BitArray.instance(optimalNumberOfBits(numberOfItems, falsePositiveRate))
+    new BloomFilterImpl[T](optimalNumberOfHashes(numberOfItems, bits.size), bits)
 
   def offHeap[T: Hash](numberOfItems: Long, falsePositiveRate: Double): OffHeapBloomFilter[T] =
-    val numberOfBits   = optimalNumberOfBits(numberOfItems, falsePositiveRate)
-    val numberOfHashes = optimalNumberOfHashes(numberOfItems, numberOfBits)
-    new OffHeapBloomFilterImpl[T](
-      numberOfBits,
-      numberOfHashes,
-      OffHeapBitArray.instance(numberOfBits)
-    )
+    val bits = OffHeapBitArray.instance(optimalNumberOfBits(numberOfItems, falsePositiveRate))
+    new OffHeapBloomFilterImpl[T](optimalNumberOfHashes(numberOfItems, bits.size), bits)
 
   def optimalNumberOfBits(numberOfItems: Long, falsePositiveRate: Double): Long =
     validateConstructionArguments(numberOfItems, falsePositiveRate)
@@ -44,11 +38,10 @@ object BloomFilter:
     )
 
 final private class OffHeapBloomFilterImpl[T](
-    numberOfBits: Long,
     numberOfHashes: Int,
     bits: OffHeapBitArray
 )(using Hash[T])
-    extends BloomFilterImpl[T](numberOfBits, numberOfHashes, bits),
+    extends BloomFilterImpl[T](numberOfHashes, bits),
       OffHeapBloomFilter[T]:
 
   override def close(): Unit = bits.close()
