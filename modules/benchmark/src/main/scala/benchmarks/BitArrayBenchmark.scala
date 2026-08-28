@@ -1,19 +1,9 @@
 package se.thanh.pds.bloomfilter
+package benchmark
 
 import _root_.bloomfilter.mutable.UnsafeBitArray as LegacyUnsafeBitArray
-import org.openjdk.jmh.annotations.{
-  Benchmark,
-  Fork,
-  Level,
-  OperationsPerInvocation,
-  Param,
-  Scope,
-  Setup,
-  State,
-  TearDown,
-  Warmup
-}
-import org.openjdk.jmh.infra.{ BenchmarkParams, Blackhole }
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.*
 
 import java.util.concurrent.TimeUnit
 

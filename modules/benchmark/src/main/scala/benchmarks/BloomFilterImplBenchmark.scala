@@ -1,17 +1,8 @@
-package benchmarks.bloomfilter
+package se.thanh.pds.bloomfilter
+package benchmark
 
-import org.openjdk.jmh.annotations.{
-  Benchmark,
-  Fork,
-  Level,
-  OperationsPerInvocation,
-  Param,
-  Scope,
-  Setup,
-  State
-}
-import org.openjdk.jmh.infra.Blackhole
-import se.thanh.pds.bloomfilter.{ BenchmarkBloomFilter, BloomFilter }
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.*
 
 import scala.util.Random
 

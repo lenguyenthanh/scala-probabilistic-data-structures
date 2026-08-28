@@ -1,73 +1,48 @@
-package benchmarks.bloomfilter
+package se.thanh.pds.bloomfilter
+package benchmark
 
 import bloomfilter.mutable.BloomFilter as LegacyBloomFilter
-import org.openjdk.jmh.annotations.{
-  Benchmark,
-  Fork,
-  Level,
-  OperationsPerInvocation,
-  Param,
-  Scope,
-  Setup,
-  State,
-  TearDown
-}
-import org.openjdk.jmh.infra.{ BenchmarkParams, Blackhole }
-import se.thanh.pds.bloomfilter.{ BenchmarkBloomFilter, BloomFilter, OffHeapBloomFilter }
-
-import scala.util.Random
+import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.*
 
 @Fork(
   value = 1,
   jvmArgsAppend = Array("-Xmx1G", "--add-opens=java.base/java.lang=ALL-UNNAMED")
 )
 @State(Scope.Benchmark)
-class StringItemBenchmark:
+class LongItemBenchmark:
 
   @Param(Array("10"))
   var tokens: Int = compiletime.uninitialized
 
-  private val itemsExpected     = 100000000L
+  private val itemsExpected     = 1000000L
   private val falsePositiveRate = 0.01
+  private val item              = 1L
 
-  @Param(Array("8", "32", "256", "1024"))
-  var length: Int = compiletime.uninitialized
-
-  @Param(Array("latin1", "utf16"))
-  var charset: String = compiletime.uninitialized
-
-  private var item: String                              = compiletime.uninitialized
-  private var implementation: String                    = compiletime.uninitialized
-  private var onHeap: BloomFilter[String]               = compiletime.uninitialized
-  private var ffmOffHeap: OffHeapBloomFilter[String]    = compiletime.uninitialized
-  private var unsafeOffHeap: OffHeapBloomFilter[String] = compiletime.uninitialized
-  private var legacy: LegacyBloomFilter[String]         = compiletime.uninitialized
+  private var implementation: String                  = compiletime.uninitialized
+  private var onHeap: BloomFilter[Long]               = compiletime.uninitialized
+  private var ffmOffHeap: OffHeapBloomFilter[Long]    = compiletime.uninitialized
+  private var unsafeOffHeap: OffHeapBloomFilter[Long] = compiletime.uninitialized
+  private var legacy: LegacyBloomFilter[Long]         = compiletime.uninitialized
 
   @Setup(Level.Trial)
   def setup(benchmarkParams: BenchmarkParams): Unit =
-    val random = new Random(0L)
-    val chars  = Array.tabulate(length)(_ =>
-      if charset == "latin1" then ('a' + random.nextInt(26)).toChar
-      else (0x4e00 + random.nextInt(1000)).toChar
-    )
-    item = new String(chars)
-
     val benchmark = benchmarkParams.getBenchmark.split('.').last
     implementation =
       if benchmark.startsWith("onHeap") then
-        onHeap = BloomFilter[String](itemsExpected, falsePositiveRate)
+        onHeap = BloomFilter[Long](itemsExpected, falsePositiveRate)
         onHeap.add(item)
         "onHeap"
       else if benchmark.startsWith("ffmOffHeap") then
-        ffmOffHeap = BenchmarkBloomFilter.foreignMemory[String](itemsExpected, falsePositiveRate)
+        ffmOffHeap = BenchmarkBloomFilter.foreignMemory[Long](itemsExpected, falsePositiveRate)
         ffmOffHeap.add(item)
         "ffmOffHeap"
       else if benchmark.startsWith("unsafeOffHeap") then
-        unsafeOffHeap = BenchmarkBloomFilter.unsafe[String](itemsExpected, falsePositiveRate)
+        unsafeOffHeap = BenchmarkBloomFilter.unsafe[Long](itemsExpected, falsePositiveRate)
         unsafeOffHeap.add(item)
         "unsafeOffHeap"
       else if benchmark.startsWith("legacy") then
-        legacy = LegacyBloomFilter[String](itemsExpected, falsePositiveRate)
+        legacy = LegacyBloomFilter[Long](itemsExpected, falsePositiveRate)
         legacy.add(item)
         "legacy"
       else throw new IllegalArgumentException(s"unknown benchmark: $benchmark")
@@ -81,80 +56,79 @@ class StringItemBenchmark:
       case _               => ()
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def onHeapAdd(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
+    while index < LongItemBenchmark.invocation do
       onHeap.add(item)
       blackhole.consume(item)
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def onHeapGet(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
+    while index < LongItemBenchmark.invocation do
       blackhole.consume(onHeap.mightContain(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def ffmOffHeapAdd(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
+    while index < LongItemBenchmark.invocation do
       ffmOffHeap.add(item)
       blackhole.consume(item)
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def ffmOffHeapGet(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
+    while index < LongItemBenchmark.invocation do
       blackhole.consume(ffmOffHeap.mightContain(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def unsafeOffHeapAdd(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
+    while index < LongItemBenchmark.invocation do
       unsafeOffHeap.add(item)
       blackhole.consume(item)
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def unsafeOffHeapGet(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
+    while index < LongItemBenchmark.invocation do
       blackhole.consume(unsafeOffHeap.mightContain(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def legacyAdd(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
-      legacy.add(item)
-      blackhole.consume(item)
+    while index < LongItemBenchmark.invocation do
+      blackhole.consume(legacy.add(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
-  @OperationsPerInvocation(StringItemBenchmark.invocation)
+  @OperationsPerInvocation(LongItemBenchmark.invocation)
   def legacyGet(blackhole: Blackhole): Unit =
     var index = 0
-    while index < StringItemBenchmark.invocation do
+    while index < LongItemBenchmark.invocation do
       blackhole.consume(legacy.mightContain(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
-object StringItemBenchmark:
+object LongItemBenchmark:
   inline val invocation = 173

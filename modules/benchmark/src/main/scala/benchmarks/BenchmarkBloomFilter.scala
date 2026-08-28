@@ -1,4 +1,5 @@
 package se.thanh.pds.bloomfilter
+package benchmark
 
 object BenchmarkBloomFilter:
 
