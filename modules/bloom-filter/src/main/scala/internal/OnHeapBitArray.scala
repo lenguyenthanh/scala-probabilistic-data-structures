@@ -4,7 +4,7 @@ package internal
 /**
  * The implementation is based on https://github.com/alexandrnikitin/bloom-filter-scala
  * Copyright 2026 Alex Nikitin
- * Licensed under the Mit License.
+ * Licensed under the MIT License.
  */
 
 /* Array backed BitArray implementation */
