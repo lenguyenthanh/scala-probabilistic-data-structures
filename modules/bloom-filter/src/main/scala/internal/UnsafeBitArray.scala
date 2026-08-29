@@ -11,13 +11,17 @@ import sun.misc.Unsafe as JUnsafe
 
 import scala.util.Try
 
+import types.*
+
 // Unsafe implementation
-final private[bloomfilter] class UnsafeBitArray(minNumberOfBits: Long) extends OffHeapBitArray:
+final private[bloomfilter] class UnsafeBitArray(numberOfWords: PositiveLong) extends OffHeapBitArray:
   import UnsafeBitArray.unsafe
 
-  require(minNumberOfBits > 0, "minNumberOfBits must be positive")
+  require(
+    numberOfWords <= OffHeapBitArray.MaxNumberOfWords,
+    s"numberOfWords cannot exceed ${OffHeapBitArray.MaxNumberOfWords}"
+  )
 
-  private val numberOfWords = (minNumberOfBits - 1) / java.lang.Long.SIZE + 1
   private val numberOfBytes = java.lang.Long.BYTES * numberOfWords
   private val pointer       = unsafe.allocateMemory(numberOfBytes)
   unsafe.setMemory(pointer, numberOfBytes, 0.toByte)

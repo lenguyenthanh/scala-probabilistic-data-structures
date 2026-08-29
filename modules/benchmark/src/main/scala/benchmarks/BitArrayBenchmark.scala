@@ -7,6 +7,8 @@ import org.openjdk.jmh.infra.*
 
 import java.util.concurrent.TimeUnit
 
+import internal.types.*
+
 @Fork(
   value = 1,
   jvmArgsAppend = Array("-Xmx1G", "--add-opens=java.base/java.lang=ALL-UNNAMED")
@@ -18,8 +20,10 @@ class BitArrayBenchmark:
   @Param(Array("5"))
   var tokens: Int = compiletime.uninitialized
 
-  private val numberOfBits = BitArrayBenchmark.invocation
-  private val bitIndex     = numberOfBits / 2
+  private val numberOfBits  = BitArrayBenchmark.invocation
+  private val bitIndex      = numberOfBits / 2
+  private val numberOfWords =
+    OffHeapBitArray.numberOfWords(PositiveLong.unsafe(numberOfBits.toLong, "numberOfBits"))
 
   private var implementation: String                    = compiletime.uninitialized
   private var onHeap: BitArray                          = compiletime.uninitialized
@@ -34,15 +38,15 @@ class BitArrayBenchmark:
 
     implementation =
       if benchmark.startsWith("onHeap") then
-        onHeap = BitArray.instance(numberOfBits)
+        onHeap = BitArray(numberOfBits)
         if positiveGet then onHeap.set(bitIndex)
         "onHeap"
       else if benchmark.startsWith("ffmOffHeap") then
-        ffmOffHeap = new internal.ForeignMemoryBitArray(numberOfBits)
+        ffmOffHeap = new internal.ForeignMemoryBitArray(numberOfWords)
         if positiveGet then ffmOffHeap.set(bitIndex)
         "ffmOffHeap"
       else if benchmark.startsWith("unsafeOffHeap") then
-        unsafeOffHeap = new internal.UnsafeBitArray(numberOfBits)
+        unsafeOffHeap = new internal.UnsafeBitArray(numberOfWords)
         if positiveGet then unsafeOffHeap.set(bitIndex)
         "unsafeOffHeap"
       else if benchmark.startsWith("legacyUnsafeOffHeap") then

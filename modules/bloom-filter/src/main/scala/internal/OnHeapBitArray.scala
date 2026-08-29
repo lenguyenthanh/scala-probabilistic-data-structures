@@ -7,23 +7,17 @@ package internal
  * Licensed under the MIT License.
  */
 
+import types.*
+
 /* Array backed BitArray implementation */
-final private[bloomfilter] class OnHeapBitArray(minNumberOfBits: Long) extends BitArray:
-  require(minNumberOfBits > 0, "minNumberOfBits must be positive")
+final private[bloomfilter] class OnHeapBitArray(numberOfWords: PositiveInt) extends BitArray:
 
-  private val numberOfWords = (minNumberOfBits - 1) / java.lang.Long.SIZE + 1
-  require(
-    numberOfWords <= Int.MaxValue,
-    s"an on-heap bit array cannot contain $numberOfWords words"
-  )
-
-  private val words    = new Array[Long](numberOfWords.toInt)
-  private var bitCount = 0L
-
-  override val size: Long = numberOfWords * java.lang.Long.SIZE
+  private val words       = new Array[Long](numberOfWords)
+  private var bitCount    = 0L
+  override val size: Long = numberOfWords.toLong * java.lang.Long.SIZE
 
   override def get(index: Long): Boolean =
-    val word = words((index >>> 6).toInt)
+    inline def word = words((index >>> 6).toInt)
     (word & index.bitMask) != 0
 
   override def set(index: Long): Unit =
@@ -35,3 +29,21 @@ final private[bloomfilter] class OnHeapBitArray(minNumberOfBits: Long) extends B
       bitCount += 1
 
   override def nonEmptyBits: Long = bitCount
+
+private[bloomfilter] object OnHeapBitArray:
+
+  def instance(minNumberOfBits: PositiveLong): OnHeapBitArray =
+    new OnHeapBitArray(numberOfWords(minNumberOfBits))
+
+  def numberOfWords(minNumberOfBits: PositiveLong): PositiveInt =
+    require(
+      minNumberOfBits <= MaxNumberOfBits,
+      s"""|The maximum number of bits supported by the default Bloom filter is
+          |$MaxNumberOfBits. The expectedNumberOfItems is too high or the
+          |falsePositiveRate is too low. Consider adjusting those values or using
+          |the off-heap variant.
+          |""".stripMargin
+    )
+    PositiveInt.unsafe(((minNumberOfBits - 1) / java.lang.Long.SIZE + 1).toInt)
+
+  final val MaxNumberOfBits: Long = Int.MaxValue.toLong * java.lang.Long.SIZE

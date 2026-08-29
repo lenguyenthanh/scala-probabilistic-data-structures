@@ -1,5 +1,7 @@
 package se.thanh.pds.bloomfilter
 
+import java.lang.Math
+
 /**
  * The implementation is based on https://github.com/alexandrnikitin/bloom-filter-scala
  * Copyright 2026 Alex Nikitin
@@ -16,38 +18,27 @@ trait OffHeapBloomFilter[T] extends BloomFilter[T], AutoCloseable
 object BloomFilter:
 
   def apply[T: Hash](numberOfItems: Long, falsePositiveRate: Double): BloomFilter[T] =
-    val bits = BitArray.instance(optimalNumberOfBits(numberOfItems, falsePositiveRate))
+    val bits = BitArray(optimalNumberOfBits(numberOfItems, falsePositiveRate))
     new BloomFilterImpl[T](optimalNumberOfHashes(numberOfItems, bits.size), bits)
 
   def offHeap[T: Hash](numberOfItems: Long, falsePositiveRate: Double): OffHeapBloomFilter[T] =
-    val bits = OffHeapBitArray.instance(optimalNumberOfBits(numberOfItems, falsePositiveRate))
+    val bits = BitArray.offHeap(optimalNumberOfBits(numberOfItems, falsePositiveRate))
     new OffHeapBloomFilterImpl[T](optimalNumberOfHashes(numberOfItems, bits.size), bits)
 
-  def optimalNumberOfBits(numberOfItems: Long, falsePositiveRate: Double): Long =
+  private[bloomfilter] def optimalNumberOfBits(numberOfItems: Long, falsePositiveRate: Double): Long =
     validateConstructionArguments(numberOfItems, falsePositiveRate)
-    val log2 = math.log(2)
-    math.ceil(-numberOfItems.toDouble * math.log(falsePositiveRate) / (log2 * log2)).toLong
+    math.ceil(-numberOfItems.toDouble * Math.log(falsePositiveRate) / (log2 * log2)).toLong
 
-  def optimalNumberOfHashes(numberOfItems: Long, numberOfBits: Long): Int =
+  private[bloomfilter] def optimalNumberOfHashes(numberOfItems: Long, numberOfBits: Long): Int =
     require(numberOfItems > 0, "numberOfItems must be positive")
     require(numberOfBits > 0, "numberOfBits must be positive")
-    math.max(1, math.round(numberOfBits.toDouble / numberOfItems * math.log(2)).toInt)
+    math.max(1, math.round(numberOfBits.toDouble / numberOfItems * log2).toInt)
 
-  private def validateConstructionArguments(
-      numberOfItems: Long,
-      falsePositiveRate: Double
-  ): Unit =
-    require(numberOfItems > 0, "numberOfItems must be positive")
+  private def validateConstructionArguments(expectedNumberOfItems: Long, falsePositiveRate: Double): Unit =
+    require(expectedNumberOfItems > 0, "expectedNumberOfItems must be positive")
     require(
       falsePositiveRate > 0.0 && falsePositiveRate < 1.0 && falsePositiveRate.isFinite,
       "falsePositiveRate must be finite and between 0 and 1"
     )
 
-final private class OffHeapBloomFilterImpl[T](
-    numberOfHashes: Int,
-    bits: OffHeapBitArray
-)(using Hash[T])
-    extends BloomFilterImpl[T](numberOfHashes, bits),
-      OffHeapBloomFilter[T]:
-
-  override def close(): Unit = bits.close()
+  final private val log2: Double = Math.log(2)
