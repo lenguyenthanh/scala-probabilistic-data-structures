@@ -3,6 +3,10 @@ package se.thanh.pds.bloomfilter
 class SampleUsageSpec extends munit.FunSuite:
 
   test("create, put and check"):
+    // given Hash[String] with
+    //   import scala.util.Random
+    //   override def hash(from: String): Long = Random().nextLong()
+
     val bloomFilter = BloomFilter[String](1000, 0.01)
 
     bloomFilter.add("")
