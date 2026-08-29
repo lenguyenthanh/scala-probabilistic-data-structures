@@ -4,7 +4,7 @@ import java.lang.Math
 
 sealed trait BloomFilter[T]:
   def add(x: T): Unit
-  def mightContain(x: T): Boolean
+  def contains(x: T): Boolean
 
   /**
    * return the current false positive rate
@@ -68,7 +68,7 @@ object BloomFilter:
         bits.set(index(h1))
         i += 1
 
-    override def mightContain(x: T): Boolean =
+    override def contains(x: T): Boolean =
       var h1 = hashFor.hash(x)
       if !bits.get(index(h1)) then false
       else

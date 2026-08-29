@@ -21,4 +21,4 @@ class OffHeapBloomFilterSpec extends munit.FunSuite:
     val filter = BloomFilter.offHeap[Long](10L, 0.01)
     filter.add(1L)
     filter.close()
-    val _ = intercept[IllegalStateException](filter.mightContain(1L))
+    val _ = intercept[IllegalStateException](filter.contains(1L))

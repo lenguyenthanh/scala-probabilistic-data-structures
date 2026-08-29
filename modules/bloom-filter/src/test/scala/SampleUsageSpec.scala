@@ -13,6 +13,6 @@ class SampleUsageSpec extends munit.FunSuite:
     bloomFilter.add("Hello!")
     bloomFilter.add("8f16c986824e40e7885a032ddd29a7d3")
 
-    assert(bloomFilter.mightContain(""))
-    assert(bloomFilter.mightContain("Hello!"))
-    assert(bloomFilter.mightContain("8f16c986824e40e7885a032ddd29a7d3"))
+    assert(bloomFilter.contains(""))
+    assert(bloomFilter.contains("Hello!"))
+    assert(bloomFilter.contains("8f16c986824e40e7885a032ddd29a7d3"))

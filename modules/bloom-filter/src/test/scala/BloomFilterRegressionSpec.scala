@@ -20,16 +20,16 @@ class BloomFilterRegressionSpec extends munit.ScalaCheckSuite:
     forAll(collisionPairGen): (wide, latin1Twin) =>
       val filter = BloomFilter[String](100000L, 0.01)
       filter.add(wide)
-      !filter.mightContain(latin1Twin)
+      !filter.contains(latin1Twin)
 
   property("an item added to one filter is not required to be in another"):
-    // Guards against the degenerate implementation where `mightContain` always returns true.
+    // Guards against the degenerate implementation where `contain` always returns true.
     forAll(Gen.listOfN(100, Arbitrary.arbitrary[Long])): (items: List[Long]) =>
       val filter          = BloomFilter[Long](100000L, 0.01)
       val (added, absent) = items.splitAt(50)
       added.foreach(filter.add)
       val absentOnly = absent.filterNot(added.contains)
-      absentOnly.count(filter.mightContain) < absentOnly.size
+      absentOnly.count(filter.contains) < absentOnly.size
 
   property("optimalNumberOfBits grows with a stricter false positive rate"):
     forAll(Gen.chooseNum[Long](1, 1000000)): (numberOfItems: Long) =>
