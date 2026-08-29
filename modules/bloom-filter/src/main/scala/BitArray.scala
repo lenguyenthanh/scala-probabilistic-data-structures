@@ -1,14 +1,14 @@
 package se.thanh.pds.bloomfilter
 
-trait BitArray:
+private[bloomfilter] trait BitArray:
   def get(index: Long): Boolean
   def set(index: Long): Unit
   def size: Long
   def nonEmptyBits: Long
 
-trait OffHeapBitArray extends BitArray, AutoCloseable
+private[bloomfilter] trait OffHeapBitArray extends BitArray, AutoCloseable
 
-object BitArray:
+private[bloomfilter] object BitArray:
   import internal.types.*
 
   def apply(minNumberOfBits: Long): BitArray =
