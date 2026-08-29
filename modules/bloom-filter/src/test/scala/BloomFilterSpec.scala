@@ -13,10 +13,10 @@ class BloomFilterSpec extends munit.FunSuite:
     assert(rate < 0.05, s"false-positive rate was $rate")
 
   test("expectedFalsePositiveRate rises from zero as items are added"):
-    val filter = BloomFilter[Long](1000L, 0.01).asInstanceOf[BloomFilter.BloomFilterImpl[Long]]
-    assertEquals(filter.expectedFalsePositiveRate(), 0.0)
+    val filter = BloomFilter[Long](1000L, 0.01)
+    assertEquals(filter.falsePositiveRate(), 0.0)
     (1L to 1000L).foreach(filter.add)
-    val rate = filter.expectedFalsePositiveRate()
+    val rate = filter.falsePositiveRate()
     assert(rate > 0.0 && rate < 0.1, s"rate was $rate")
 
   test("sizing uses the standard Bloom-filter formula"):

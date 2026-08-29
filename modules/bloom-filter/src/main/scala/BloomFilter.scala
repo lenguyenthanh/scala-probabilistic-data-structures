@@ -6,6 +6,12 @@ sealed trait BloomFilter[T]:
   def add(x: T): Unit
   def mightContain(x: T): Boolean
 
+  /**
+   * return the current false positive rate
+   * @return Double
+   */
+  def falsePositiveRate(): Double
+
 /* use ffm or unsafe to allocate big memory to overcome array size limit */
 sealed trait OffHeapBloomFilter[T] extends BloomFilter[T], AutoCloseable
 
@@ -75,7 +81,7 @@ object BloomFilter:
           i += 1
         result
 
-    def expectedFalsePositiveRate(): Double =
+    override def falsePositiveRate(): Double =
       java.lang.Math.pow(bits.nonEmptyBits.toDouble / numberOfBits, numberOfHashes.toDouble)
 
     private inline def index(hash: Long): Long =

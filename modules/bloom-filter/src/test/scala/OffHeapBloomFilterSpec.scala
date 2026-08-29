@@ -6,10 +6,9 @@ class OffHeapBloomFilterSpec extends munit.FunSuite:
 
   test("off-heap expectedFalsePositiveRate rises as items are added"):
     Using.resource(BloomFilter.offHeap[Long](1000L, 0.01)): filter =>
-      val implementation = filter.asInstanceOf[BloomFilter.BloomFilterImpl[Long]]
-      assertEquals(implementation.expectedFalsePositiveRate(), 0.0)
+      assertEquals(filter.falsePositiveRate(), 0.0)
       (1L to 1000L).foreach(filter.add)
-      val rate = implementation.expectedFalsePositiveRate()
+      val rate = filter.falsePositiveRate()
       assert(rate > 0.0 && rate < 0.1, s"rate was $rate")
 
   test("an off-heap filter owns an explicit resource lifecycle"):
