@@ -2,6 +2,7 @@ package se.thanh.pds.bloomfilter
 package benchmark
 
 import internal.types.*
+import BloomFilter.{ BloomFilterImpl, OffHeapBloomFilterImpl }
 
 object BenchmarkBloomFilter:
 
@@ -26,5 +27,4 @@ object BenchmarkBloomFilter:
     val bits           = createBits(numberOfWords)
     val numberOfHashes = BloomFilter.optimalNumberOfHashes(numberOfItems, bits.size)
 
-    new BloomFilterImpl[T](numberOfHashes, bits) with OffHeapBloomFilter[T]:
-      override def close(): Unit = bits.close()
+    new OffHeapBloomFilterImpl[T](numberOfHashes, bits)

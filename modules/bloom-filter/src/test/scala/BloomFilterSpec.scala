@@ -13,7 +13,7 @@ class BloomFilterSpec extends munit.FunSuite:
     assert(rate < 0.05, s"false-positive rate was $rate")
 
   test("expectedFalsePositiveRate rises from zero as items are added"):
-    val filter = BloomFilter[Long](1000L, 0.01).asInstanceOf[BloomFilterImpl[Long]]
+    val filter = BloomFilter[Long](1000L, 0.01).asInstanceOf[BloomFilter.BloomFilterImpl[Long]]
     assertEquals(filter.expectedFalsePositiveRate(), 0.0)
     (1L to 1000L).foreach(filter.add)
     val rate = filter.expectedFalsePositiveRate()
@@ -39,7 +39,7 @@ class BloomFilterSpec extends munit.FunSuite:
     given Hash[Long] with
       override def hash(from: Long): Long = from
 
-    val filter = new BloomFilterImpl[Long](17, bits)
+    val filter = new BloomFilter.BloomFilterImpl[Long](17, bits)
     List(Long.MinValue, Long.MinValue + 1, -1L, 0L, 1L, Long.MaxValue).foreach: hash =>
       filter.add(hash)
       assert(filter.mightContain(hash))

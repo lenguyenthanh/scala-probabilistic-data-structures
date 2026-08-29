@@ -2,18 +2,12 @@ package se.thanh.pds.bloomfilter
 
 import java.lang.Math
 
-/**
- * The implementation is based on https://github.com/alexandrnikitin/bloom-filter-scala
- * Copyright 2026 Alex Nikitin
- * Licensed under the MIT License.
- */
-
-trait BloomFilter[T]:
+sealed trait BloomFilter[T]:
   def add(x: T): Unit
   def mightContain(x: T): Boolean
 
 /* use ffm or unsafe to allocate big memory to overcome array size limit */
-trait OffHeapBloomFilter[T] extends BloomFilter[T], AutoCloseable
+sealed trait OffHeapBloomFilter[T] extends BloomFilter[T], AutoCloseable
 
 object BloomFilter:
 
@@ -42,3 +36,62 @@ object BloomFilter:
     )
 
   final private val log2: Double = Math.log(2)
+  private inline val hashMagic   = 0x517cc1b727220a95L
+
+  /**
+   * The implementation is based on https://github.com/alexandrnikitin/bloom-filter-scala
+   * Copyright 2026 Alex Nikitin
+   * Licensed under the MIT License.
+   */
+  private[bloomfilter] class BloomFilterImpl[T](
+      val numberOfHashes: Int,
+      private val bits: BitArray
+  )(using hashFor: Hash[T])
+      extends BloomFilter[T]:
+
+    val numberOfBits: Long = bits.size
+
+    override def add(x: T): Unit =
+      var h1 = hashFor.hash(x)
+      val h2 = h1 * hashMagic
+      bits.set(index(h1))
+
+      var i = 1
+      while i < numberOfHashes do
+        h1 = nextHash(h1, h2)
+        bits.set(index(h1))
+        i += 1
+
+    override def mightContain(x: T): Boolean =
+      var h1 = hashFor.hash(x)
+      if !bits.get(index(h1)) then false
+      else
+        val h2     = h1 * hashMagic
+        var i      = 1
+        var result = true
+        while i < numberOfHashes && result do
+          h1 = nextHash(h1, h2)
+          result = bits.get(index(h1))
+          i += 1
+        result
+
+    def expectedFalsePositiveRate(): Double =
+      java.lang.Math.pow(bits.nonEmptyBits.toDouble / numberOfBits, numberOfHashes.toDouble)
+
+    private inline def index(hash: Long): Long =
+      // Maps hash into [0, numberOfBits). Wants entropy across all 64 bits.
+      // From https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+      // via https://github.com/tomtomwombat/fastbloom/blob/5bbfc14f98b4fc4cd5a124626174fdf54e0b0c3d/src/lib.rs#L398
+      java.lang.Math.unsignedMultiplyHigh(hash, numberOfBits)
+
+    private inline def nextHash(h1: Long, h2: Long): Long =
+      // From https://www.eecs.harvard.edu/~michaelm/postscripts/rsa2008.pdf via
+      // https://github.com/tomtomwombat/fastbloom/blob/5bbfc14f98b4fc4cd5a124626174fdf54e0b0c3d/src/hasher.rs#L209
+      java.lang.Long.rotateLeft(h1, 5) + h2
+
+  final private[bloomfilter] class OffHeapBloomFilterImpl[T](numberOfHashes: Int, bits: OffHeapBitArray)(using
+      Hash[T]
+  ) extends BloomFilterImpl[T](numberOfHashes, bits),
+        OffHeapBloomFilter[T]:
+
+    override def close(): Unit = bits.close()
