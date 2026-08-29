@@ -1,7 +1,7 @@
 package se.thanh.pds.bloomfilter
 package benchmark
 
-import bloomfilter.mutable.BloomFilter as LegacyBloomFilter
+import bloomfilter.mutable.BloomFilter as OriginalBloomFilter
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 
@@ -28,7 +28,7 @@ class ArrayByteItemBenchmark:
   private var onHeap: BloomFilter[Array[Byte]]               = compiletime.uninitialized
   private var ffmOffHeap: OffHeapBloomFilter[Array[Byte]]    = compiletime.uninitialized
   private var unsafeOffHeap: OffHeapBloomFilter[Array[Byte]] = compiletime.uninitialized
-  private var legacy: LegacyBloomFilter[Array[Byte]]         = compiletime.uninitialized
+  private var original: OriginalBloomFilter[Array[Byte]]     = compiletime.uninitialized
 
   @Setup(Level.Trial)
   def setup(benchmarkParams: BenchmarkParams): Unit =
@@ -50,10 +50,10 @@ class ArrayByteItemBenchmark:
         unsafeOffHeap = BenchmarkBloomFilter.unsafe[Array[Byte]](itemsExpected, falsePositiveRate)
         unsafeOffHeap.add(item)
         "unsafeOffHeap"
-      else if benchmark.startsWith("legacy") then
-        legacy = LegacyBloomFilter[Array[Byte]](itemsExpected, falsePositiveRate)
-        legacy.add(item)
-        "legacy"
+      else if benchmark.startsWith("original") then
+        original = OriginalBloomFilter[Array[Byte]](itemsExpected, falsePositiveRate)
+        original.add(item)
+        "original"
       else throw new IllegalArgumentException(s"unknown benchmark: $benchmark")
 
   @TearDown(Level.Trial)
@@ -61,7 +61,7 @@ class ArrayByteItemBenchmark:
     implementation match
       case "ffmOffHeap"    => ffmOffHeap.close()
       case "unsafeOffHeap" => unsafeOffHeap.close()
-      case "legacy"        => legacy.dispose()
+      case "original"      => original.dispose()
       case _               => ()
 
   @Benchmark
@@ -123,20 +123,20 @@ class ArrayByteItemBenchmark:
 
   @Benchmark
   @OperationsPerInvocation(ArrayByteItemBenchmark.invocation)
-  def legacyAdd(blackhole: Blackhole): Unit =
+  def originalAdd(blackhole: Blackhole): Unit =
     var index = 0
     while index < ArrayByteItemBenchmark.invocation do
-      legacy.add(item)
+      original.add(item)
       blackhole.consume(item)
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
   @OperationsPerInvocation(ArrayByteItemBenchmark.invocation)
-  def legacyGet(blackhole: Blackhole): Unit =
+  def originalGet(blackhole: Blackhole): Unit =
     var index = 0
     while index < ArrayByteItemBenchmark.invocation do
-      blackhole.consume(legacy.mightContain(item))
+      blackhole.consume(original.mightContain(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 

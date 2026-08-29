@@ -12,6 +12,8 @@ addSbtPlugin("org.typelevel" % "sbt-typelevel-mima" % "0.8.7")
 
 addSbtPlugin("org.typelevel" % "sbt-typelevel-settings" % "0.8.7")
 
+addSbtPlugin("org.typelevel" % "sbt-typelevel-site" % "0.8.7")
+
 addSbtPlugin("org.typelevel" % "sbt-typelevel-versioning" % "0.8.7")
 
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.8")

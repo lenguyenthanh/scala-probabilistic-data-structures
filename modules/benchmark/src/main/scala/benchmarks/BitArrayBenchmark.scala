@@ -1,7 +1,7 @@
 package se.thanh.pds.bloomfilter
 package benchmark
 
-import _root_.bloomfilter.mutable.UnsafeBitArray as LegacyUnsafeBitArray
+import _root_.bloomfilter.mutable.UnsafeBitArray as OriginalUnsafeBitArray
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 
@@ -25,11 +25,11 @@ class BitArrayBenchmark:
   private val numberOfWords =
     OffHeapBitArray.numberOfWords(PositiveLong.unsafe(numberOfBits.toLong, "numberOfBits"))
 
-  private var implementation: String                    = compiletime.uninitialized
-  private var onHeap: BitArray                          = compiletime.uninitialized
-  private var ffmOffHeap: OffHeapBitArray               = compiletime.uninitialized
-  private var unsafeOffHeap: OffHeapBitArray            = compiletime.uninitialized
-  private var legacyUnsafeOffHeap: LegacyUnsafeBitArray = compiletime.uninitialized
+  private var implementation: String                        = compiletime.uninitialized
+  private var onHeap: BitArray                              = compiletime.uninitialized
+  private var ffmOffHeap: OffHeapBitArray                   = compiletime.uninitialized
+  private var unsafeOffHeap: OffHeapBitArray                = compiletime.uninitialized
+  private var originalUnsafeOffHeap: OriginalUnsafeBitArray = compiletime.uninitialized
 
   @Setup(Level.Invocation)
   def setup(benchmarkParams: BenchmarkParams): Unit =
@@ -49,10 +49,10 @@ class BitArrayBenchmark:
         unsafeOffHeap = new internal.UnsafeBitArray(numberOfWords)
         if positiveGet then unsafeOffHeap.set(bitIndex)
         "unsafeOffHeap"
-      else if benchmark.startsWith("legacyUnsafeOffHeap") then
-        legacyUnsafeOffHeap = new LegacyUnsafeBitArray(numberOfBits)
-        if positiveGet then legacyUnsafeOffHeap.set(bitIndex)
-        "legacy"
+      else if benchmark.startsWith("originalUnsafeOffHeap") then
+        originalUnsafeOffHeap = new OriginalUnsafeBitArray(numberOfBits)
+        if positiveGet then originalUnsafeOffHeap.set(bitIndex)
+        "original"
       else throw new IllegalArgumentException(s"unknown benchmark: $benchmark")
 
   @TearDown(Level.Invocation)
@@ -60,7 +60,7 @@ class BitArrayBenchmark:
     implementation match
       case "ffmOffHeap"    => ffmOffHeap.close()
       case "unsafeOffHeap" => unsafeOffHeap.close()
-      case "legacy"        => legacyUnsafeOffHeap.dispose()
+      case "original"      => originalUnsafeOffHeap.dispose()
       case _               => ()
 
   @Benchmark
@@ -122,22 +122,22 @@ class BitArrayBenchmark:
 
   @Benchmark
   @OperationsPerInvocation(BitArrayBenchmark.invocation)
-  def legacyUnsafeOffHeapGet(blackhole: Blackhole): Unit =
+  def originalUnsafeOffHeapGet(blackhole: Blackhole): Unit =
     var index = 0L
     while index < numberOfBits do
-      blackhole.consume(legacyUnsafeOffHeap.get(bitIndex))
+      blackhole.consume(originalUnsafeOffHeap.get(bitIndex))
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
   @OperationsPerInvocation(BitArrayBenchmark.invocation)
-  def legacyUnsafeOffHeapNewBitSet(blackhole: Blackhole): Unit =
+  def originalUnsafeOffHeapNewBitSet(blackhole: Blackhole): Unit =
     var index = 0L
     while index < numberOfBits do
-      legacyUnsafeOffHeap.set(index)
+      originalUnsafeOffHeap.set(index)
       Blackhole.consumeCPU(tokens)
       index += 1
-    blackhole.consume(legacyUnsafeOffHeap.get(numberOfBits - 1))
+    blackhole.consume(originalUnsafeOffHeap.get(numberOfBits - 1))
 
 object BitArrayBenchmark:
   inline val invocation = 9585059

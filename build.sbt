@@ -1,6 +1,6 @@
-ThisBuild / tlBaseVersion      := "0.0"
-ThisBuild / scalaVersion       := "3.3.8"
-ThisBuild / versionScheme      := Some("early-semver")
+ThisBuild / tlBaseVersion := "0.0"
+ThisBuild / scalaVersion  := "3.3.8"
+ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / scalacOptions += "-Yfuture-lazy-vals"
 ThisBuild / semanticdbEnabled := true
 ThisBuild / organization      := "se.thanh.pds"
@@ -15,6 +15,8 @@ ThisBuild / githubWorkflowJavaVersions := Seq(
 )
 ThisBuild / tlCiMimaBinaryIssueCheck            := true
 ThisBuild / tlCiDependencyGraphJob              := false
+ThisBuild / tlSiteJavaVersion                   := JavaSpec.temurin("25")
+ThisBuild / tlSitePublishBranch                 := Some("main")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowBuild += WorkflowStep.Sbt(
   List("check"),
@@ -49,6 +51,18 @@ lazy val benchmark = project
       .filterNot(_ == "-Xlint:all") :+ "-Xlint:all,-path",
     libraryDependencies +=
       "com.github.alexandrnikitin" %% "bloom-filter" % "0.13.1_lila-1"
+  )
+
+lazy val docs = project
+  .in(file("site"))
+  .dependsOn(bloomFilter)
+  .enablePlugins(TypelevelSitePlugin)
+  .settings(
+    name                   := "Scala probabilistic data structures",
+    description            := "Probabilistic data structures for Scala 3",
+    githubWorkflowJobSetup :=
+      List(WorkflowStep.CheckoutFull, WorkflowStep.SetupSbt) ++
+        WorkflowStep.SetupJava(List(tlSiteJavaVersion.value))
   )
 
 lazy val root = project

@@ -30,12 +30,10 @@ object BloomFilter:
     math.ceil(-numberOfItems.toDouble * Math.log(falsePositiveRate) / (log2 * log2)).toLong
 
   private[bloomfilter] def optimalNumberOfHashes(numberOfItems: Long, numberOfBits: Long): Int =
-    require(numberOfItems > 0, "numberOfItems must be positive")
-    require(numberOfBits > 0, "numberOfBits must be positive")
     math.max(1, math.round(numberOfBits.toDouble / numberOfItems * log2).toInt)
 
-  private def validateConstructionArguments(expectedNumberOfItems: Long, falsePositiveRate: Double): Unit =
-    require(expectedNumberOfItems > 0, "expectedNumberOfItems must be positive")
+  private def validateConstructionArguments(numberOfItems: Long, falsePositiveRate: Double): Unit =
+    require(numberOfItems > 0, "numberOfItems must be positive")
     require(
       falsePositiveRate > 0.0 && falsePositiveRate < 1.0 && falsePositiveRate.isFinite,
       "falsePositiveRate must be finite and between 0 and 1"
