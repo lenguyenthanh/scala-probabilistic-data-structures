@@ -1,8 +1,17 @@
-## sbt project compiled with Scala 3
+> [!IMPORTANT]
+> This started as Scala 3 port of [original
+> Originally a port of [original  project](https://github.com/alexandrnikitin/bloom-filter-scala),
+> this library remains heavily inspired by it while introducing bug fixes, improvements and additional functionality.
 
-### Usage
+# Scala probabilistic data structures
 
-This is a normal sbt project. You can compile code with `sbt compile`, run it with `sbt run`, and `sbt console` will start a Scala 3 REPL.
+A Scala 3 library of efficient probabilistic data structures. The first available data structure
+is a mutable Bloom filter with on-heap and off-heap storage.
 
-For more information on the sbt-dotty plugin, see the
-[scala3-example-project](https://github.com/scala/scala3-example-project/blob/main/README.md).
+See the [documentation](https://lenguyenthanh.github.io/scala-probabilistic-data-structures/)
+for installation and a quickstart.
+
+## Development
+
+Run the tests with `sbt test`, or preview the documentation locally with
+`sbt docs/tlSitePreview`.
