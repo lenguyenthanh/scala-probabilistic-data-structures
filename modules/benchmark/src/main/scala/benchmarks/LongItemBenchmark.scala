@@ -1,7 +1,7 @@
 package se.thanh.pds.bloomfilter
 package benchmark
 
-import bloomfilter.mutable.BloomFilter as LegacyBloomFilter
+import bloomfilter.mutable.BloomFilter as OriginalBloomFilter
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 
@@ -23,7 +23,7 @@ class LongItemBenchmark:
   private var onHeap: BloomFilter[Long]               = compiletime.uninitialized
   private var ffmOffHeap: OffHeapBloomFilter[Long]    = compiletime.uninitialized
   private var unsafeOffHeap: OffHeapBloomFilter[Long] = compiletime.uninitialized
-  private var legacy: LegacyBloomFilter[Long]         = compiletime.uninitialized
+  private var original: OriginalBloomFilter[Long]     = compiletime.uninitialized
 
   @Setup(Level.Trial)
   def setup(benchmarkParams: BenchmarkParams): Unit =
@@ -41,10 +41,10 @@ class LongItemBenchmark:
         unsafeOffHeap = BenchmarkBloomFilter.unsafe[Long](itemsExpected, falsePositiveRate)
         unsafeOffHeap.add(item)
         "unsafeOffHeap"
-      else if benchmark.startsWith("legacy") then
-        legacy = LegacyBloomFilter[Long](itemsExpected, falsePositiveRate)
-        legacy.add(item)
-        "legacy"
+      else if benchmark.startsWith("original") then
+        original = OriginalBloomFilter[Long](itemsExpected, falsePositiveRate)
+        original.add(item)
+        "original"
       else throw new IllegalArgumentException(s"unknown benchmark: $benchmark")
 
   @TearDown(Level.Trial)
@@ -52,7 +52,7 @@ class LongItemBenchmark:
     implementation match
       case "ffmOffHeap"    => ffmOffHeap.close()
       case "unsafeOffHeap" => unsafeOffHeap.close()
-      case "legacy"        => legacy.dispose()
+      case "original"      => original.dispose()
       case _               => ()
 
   @Benchmark
@@ -114,19 +114,19 @@ class LongItemBenchmark:
 
   @Benchmark
   @OperationsPerInvocation(LongItemBenchmark.invocation)
-  def legacyAdd(blackhole: Blackhole): Unit =
+  def originalAdd(blackhole: Blackhole): Unit =
     var index = 0
     while index < LongItemBenchmark.invocation do
-      blackhole.consume(legacy.add(item))
+      blackhole.consume(original.add(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
   @OperationsPerInvocation(LongItemBenchmark.invocation)
-  def legacyGet(blackhole: Blackhole): Unit =
+  def originalGet(blackhole: Blackhole): Unit =
     var index = 0
     while index < LongItemBenchmark.invocation do
-      blackhole.consume(legacy.mightContain(item))
+      blackhole.consume(original.mightContain(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 

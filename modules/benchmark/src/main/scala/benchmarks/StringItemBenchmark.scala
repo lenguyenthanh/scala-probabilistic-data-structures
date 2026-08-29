@@ -1,7 +1,7 @@
 package se.thanh.pds.bloomfilter
 package benchmark
 
-import bloomfilter.mutable.BloomFilter as LegacyBloomFilter
+import bloomfilter.mutable.BloomFilter as OriginalBloomFilter
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.*
 
@@ -31,7 +31,7 @@ class StringItemBenchmark:
   private var onHeap: BloomFilter[String]               = compiletime.uninitialized
   private var ffmOffHeap: OffHeapBloomFilter[String]    = compiletime.uninitialized
   private var unsafeOffHeap: OffHeapBloomFilter[String] = compiletime.uninitialized
-  private var legacy: LegacyBloomFilter[String]         = compiletime.uninitialized
+  private var original: OriginalBloomFilter[String]     = compiletime.uninitialized
 
   @Setup(Level.Trial)
   def setup(benchmarkParams: BenchmarkParams): Unit =
@@ -56,10 +56,10 @@ class StringItemBenchmark:
         unsafeOffHeap = BenchmarkBloomFilter.unsafe[String](itemsExpected, falsePositiveRate)
         unsafeOffHeap.add(item)
         "unsafeOffHeap"
-      else if benchmark.startsWith("legacy") then
-        legacy = LegacyBloomFilter[String](itemsExpected, falsePositiveRate)
-        legacy.add(item)
-        "legacy"
+      else if benchmark.startsWith("original") then
+        original = OriginalBloomFilter[String](itemsExpected, falsePositiveRate)
+        original.add(item)
+        "original"
       else throw new IllegalArgumentException(s"unknown benchmark: $benchmark")
 
   @TearDown(Level.Trial)
@@ -67,7 +67,7 @@ class StringItemBenchmark:
     implementation match
       case "ffmOffHeap"    => ffmOffHeap.close()
       case "unsafeOffHeap" => unsafeOffHeap.close()
-      case "legacy"        => legacy.dispose()
+      case "original"      => original.dispose()
       case _               => ()
 
   @Benchmark
@@ -129,20 +129,20 @@ class StringItemBenchmark:
 
   @Benchmark
   @OperationsPerInvocation(StringItemBenchmark.invocation)
-  def legacyAdd(blackhole: Blackhole): Unit =
+  def originalAdd(blackhole: Blackhole): Unit =
     var index = 0
     while index < StringItemBenchmark.invocation do
-      legacy.add(item)
+      original.add(item)
       blackhole.consume(item)
       Blackhole.consumeCPU(tokens)
       index += 1
 
   @Benchmark
   @OperationsPerInvocation(StringItemBenchmark.invocation)
-  def legacyGet(blackhole: Blackhole): Unit =
+  def originalGet(blackhole: Blackhole): Unit =
     var index = 0
     while index < StringItemBenchmark.invocation do
-      blackhole.consume(legacy.mightContain(item))
+      blackhole.consume(original.mightContain(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
