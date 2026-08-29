@@ -3,7 +3,7 @@ ThisBuild / scalaVersion       := "3.3.8"
 ThisBuild / versionScheme      := Some("early-semver")
 ThisBuild / scalacOptions += "-Yfuture-lazy-vals"
 ThisBuild / semanticdbEnabled := true
-ThisBuild / organization      := "se.thanh"
+ThisBuild / organization      := "se.thanh.pds"
 ThisBuild / organizationName  := "Thanh Le"
 ThisBuild / developers        := List(
   tlGitHubDev("lenguyenthanh", "Thanh Le")
