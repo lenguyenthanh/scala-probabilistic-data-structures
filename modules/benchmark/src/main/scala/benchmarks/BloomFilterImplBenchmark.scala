@@ -42,14 +42,14 @@ class BloomFilterImplBenchmark:
     current = BenchmarkBloomFilter.onHeap[String](numberOfBits, numberOfHashes)
     current.add(item)
 
-    require(current.mightContain(item), "current BloomFilterImpl must contain the setup item")
+    require(current.contains(item), "current BloomFilterImpl must contain the setup item")
 
   @Benchmark
   @OperationsPerInvocation(BloomFilterImplBenchmark.invocation)
   def currentGet(blackhole: Blackhole): Unit =
     var index = 0
     while index < BloomFilterImplBenchmark.invocation do
-      blackhole.consume(current.mightContain(item))
+      blackhole.consume(current.contains(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 

@@ -1,10 +1,13 @@
 package se.thanh.pds.bloomfilter
 package benchmark
 
+import internal.types.*
+import BloomFilter.{ BloomFilterImpl, OffHeapBloomFilterImpl }
+
 object BenchmarkBloomFilter:
 
   def onHeap[T: Hash](numberOfBits: Long, numberOfHashes: Int): BloomFilter[T] =
-    new BloomFilterImpl[T](numberOfHashes, BitArray.instance(numberOfBits))
+    new BloomFilterImpl[T](numberOfHashes, BitArray(numberOfBits))
 
   def foreignMemory[T: Hash](numberOfItems: Long, falsePositiveRate: Double): OffHeapBloomFilter[T] =
     require(Runtime.version().feature() >= 22, "foreign memory benchmarks require JDK 22 or newer")
@@ -16,10 +19,12 @@ object BenchmarkBloomFilter:
   private def offHeap[T: Hash](
       numberOfItems: Long,
       falsePositiveRate: Double
-  )(createBits: Long => OffHeapBitArray): OffHeapBloomFilter[T] =
-    val numberOfBits   = BloomFilter.optimalNumberOfBits(numberOfItems, falsePositiveRate)
-    val bits           = createBits(numberOfBits)
+  )(createBits: PositiveLong => OffHeapBitArray): OffHeapBloomFilter[T] =
+    val numberOfBits  = BloomFilter.optimalNumberOfBits(numberOfItems, falsePositiveRate)
+    val numberOfWords = OffHeapBitArray.numberOfWords(
+      PositiveLong.unsafe(numberOfBits, "numberOfBits")
+    )
+    val bits           = createBits(numberOfWords)
     val numberOfHashes = BloomFilter.optimalNumberOfHashes(numberOfItems, bits.size)
 
-    new BloomFilterImpl[T](numberOfHashes, bits) with OffHeapBloomFilter[T]:
-      override def close(): Unit = bits.close()
+    new OffHeapBloomFilterImpl[T](numberOfHashes, bits)

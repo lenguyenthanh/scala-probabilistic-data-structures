@@ -79,7 +79,7 @@ class ArrayByteItemBenchmark:
   def onHeapGet(blackhole: Blackhole): Unit =
     var index = 0
     while index < ArrayByteItemBenchmark.invocation do
-      blackhole.consume(onHeap.mightContain(item))
+      blackhole.consume(onHeap.contains(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
@@ -98,7 +98,7 @@ class ArrayByteItemBenchmark:
   def ffmOffHeapGet(blackhole: Blackhole): Unit =
     var index = 0
     while index < ArrayByteItemBenchmark.invocation do
-      blackhole.consume(ffmOffHeap.mightContain(item))
+      blackhole.consume(ffmOffHeap.contains(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 
@@ -117,7 +117,7 @@ class ArrayByteItemBenchmark:
   def unsafeOffHeapGet(blackhole: Blackhole): Unit =
     var index = 0
     while index < ArrayByteItemBenchmark.invocation do
-      blackhole.consume(unsafeOffHeap.mightContain(item))
+      blackhole.consume(unsafeOffHeap.contains(item))
       Blackhole.consumeCPU(tokens)
       index += 1
 

@@ -14,15 +14,15 @@ final class BloomFilterLaws[T](create: (Long, Double) => BloomFilter[T]):
 
   def freshFilterReportsAbsence(expectedItems: Long, items: List[T]): Boolean =
     withFilter(expectedItems): filter =>
-      items.forall(item => !filter.mightContain(item))
+      items.forall(item => !filter.contains(item))
 
   def addedItemsMightBePresent(expectedItems: Long, items: List[T]): Boolean =
     withFilter(expectedItems): filter =>
       items.foreach(filter.add)
-      items.forall(filter.mightContain)
+      items.forall(filter.contains)
 
   def repeatedAddsPreserveMembership(expectedItems: Long, items: List[T]): Boolean =
     withFilter(expectedItems): filter =>
       items.foreach(filter.add)
       items.foreach(filter.add)
-      items.forall(filter.mightContain)
+      items.forall(filter.contains)

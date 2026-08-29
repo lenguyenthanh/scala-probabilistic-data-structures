@@ -8,15 +8,15 @@ class BloomFilterSpec extends munit.FunSuite:
     (1 to numberOfItems).foreach(i => filter.add(s"present-$i"))
 
     val falsePositives =
-      (1 to numberOfItems).count(i => filter.mightContain(s"absent-$i"))
+      (1 to numberOfItems).count(i => filter.contains(s"absent-$i"))
     val rate = falsePositives.toDouble / numberOfItems
     assert(rate < 0.05, s"false-positive rate was $rate")
 
   test("expectedFalsePositiveRate rises from zero as items are added"):
-    val filter = BloomFilter[Long](1000L, 0.01).asInstanceOf[BloomFilterImpl[Long]]
-    assertEquals(filter.expectedFalsePositiveRate(), 0.0)
+    val filter = BloomFilter[Long](1000L, 0.01)
+    assertEquals(filter.falsePositiveRate(), 0.0)
     (1L to 1000L).foreach(filter.add)
-    val rate = filter.expectedFalsePositiveRate()
+    val rate = filter.falsePositiveRate()
     assert(rate > 0.0 && rate < 0.1, s"rate was $rate")
 
   test("sizing uses the standard Bloom-filter formula"):
@@ -39,10 +39,10 @@ class BloomFilterSpec extends munit.FunSuite:
     given Hash[Long] with
       override def hash(from: Long): Long = from
 
-    val filter = new BloomFilterImpl[Long](17, bits)
+    val filter = new BloomFilter.BloomFilterImpl[Long](17, bits)
     List(Long.MinValue, Long.MinValue + 1, -1L, 0L, 1L, Long.MaxValue).foreach: hash =>
       filter.add(hash)
-      assert(filter.mightContain(hash))
+      assert(filter.contains(hash))
 
   final private class RecordingBitArray(val size: Long) extends BitArray:
     val indices                            = collection.mutable.ListBuffer.empty[Long]
