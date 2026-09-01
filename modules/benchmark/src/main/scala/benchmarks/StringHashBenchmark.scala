@@ -24,21 +24,21 @@ class StringHashBenchmark:
   @Param(Array("8", "32", "256", "1024"))
   var length: Int = compiletime.uninitialized
 
-  @Param(Array("ascii", "latin1", "bmp")) // "supplementary", "early-wide", "late-wide"))
-  var shape: String = compiletime.uninitialized
+  @Param(Array("ascii", "latin1"))
+  var coder: String = compiletime.uninitialized
 
   private var value: String        = compiletime.uninitialized
   private var hasher: Hash[String] = compiletime.uninitialized
 
   @Setup(Level.Trial)
   def setup(): Unit =
-    value = StringHashBenchmarkData.value(shape, length)
+    value = StringHashBenchmarkData.value(coder, length)
     val expectedBytes = implementation match
       case "safe" =>
         hasher = Hash[String]
         StringHashBenchmarkData.utf16LeBytes(value)
       case "unsafe" =>
-        hasher = Hash.UnsafeCompact.stringHash
+        hasher = Hash.privateJDK.stringHash
         StringHashBenchmarkData.compactBytes(value)
       case other => throw new IllegalArgumentException(s"unknown implementation: $other")
     val expected = Hash[Array[Byte]].hash(expectedBytes)
@@ -50,19 +50,11 @@ class StringHashBenchmark:
 
 private[benchmark] object StringHashBenchmarkData:
 
-  def value(shape: String, length: Int): String =
-    val chars = shape match
+  def value(coder: String, length: Int): String =
+    val chars = coder match
       case "ascii"  => Array.tabulate(length)(i => ('a' + i % 26).toChar)
       case "latin1" => Array.tabulate(length)(i => (0xc0 + i % 32).toChar)
-      case "bmp"    => Array.tabulate(length)(i => (0x4e00 + i % 1000).toChar)
-      // case "supplementary" =>
-      //   val pair = Character.toChars(0x1f600)
-      //   Array.tabulate(length)(i => pair(i & 1))
-      // case "early-wide" =>
-      //   Array.tabulate(length)(i => if i == 0 then '\u4e00' else ('a' + i % 26).toChar)
-      // case "late-wide" =>
-      //   Array.tabulate(length)(i => if i == length - 1 then '\u4e00' else ('a' + i % 26).toChar)
-      case other => throw new IllegalArgumentException(s"unknown shape: $other")
+      case other    => throw new IllegalArgumentException(s"unknown shape: $other")
 
     new String(chars)
 

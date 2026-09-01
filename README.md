@@ -8,11 +8,8 @@
 A Scala 3 library of efficient probabilistic data structures. The first available data structure
 is a mutable Bloom filter with on-heap and off-heap storage.
 
+This library aims for providing safe and fast implementation first, and for our fearless users, this
+also provides blazing fast implementation by taking advantage of unsafe and/or private JDK api.
+
 See the [documentation](https://lenguyenthanh.github.io/scala-probabilistic-data-structures/)
 for installation and a quickstart.
-
-The default `Hash[String]` is allocation-free and requires no JVM access flags on Java 18+. An
-explicit `Hash.UnsafeCompact` instance is available for long Latin-1-heavy workloads, but it requires
-`--add-opens=java.base/java.lang=ALL-UNNAMED` and hashes the JVM's private String backing bytes. Its
-results depend on the JVM's compact-string configuration and layout, so a filter must use the same
-hasher and JVM configuration for every write and query.
