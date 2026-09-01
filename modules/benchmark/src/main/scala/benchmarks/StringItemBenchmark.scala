@@ -9,7 +9,7 @@ import scala.util.Random
 
 @Fork(
   value = 1,
-  jvmArgsAppend = Array("-Xmx1G", "--add-opens=java.base/java.lang=ALL-UNNAMED")
+  jvmArgsAppend = Array("-Xmx1G")
 )
 @State(Scope.Benchmark)
 class StringItemBenchmark:

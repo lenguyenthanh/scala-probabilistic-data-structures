@@ -6,9 +6,7 @@ package se.thanh.pds.bloomfilter
  * Licensed under the MIT License.
  */
 
-import se.thanh.pds.bloomfilter.internal.hashing.MurmurHash3
-
-import java.lang.invoke.{ MethodHandles, VarHandle }
+import se.thanh.pds.bloomfilter.internal.hashing.{ MurmurHash3, UnsafeStringHash }
 
 trait Hash[A]:
   def hash(from: A): Long
@@ -27,20 +25,15 @@ object Hash extends Hash.DefaultInstances:
 
     given stringHash: Hash[String] with
       override def hash(from: String): Long =
-        val value = stringValue.get(from).asInstanceOf[Array[Byte]]
-        MurmurHash3.murmurhash3_x64_64(value, 0, value.length, 0)
+        MurmurHash3.murmurhash3_x64_64_utf16le(from, 0)
 
-  private val stringValue: VarHandle =
-    try
-      MethodHandles
-        .privateLookupIn(classOf[String], MethodHandles.lookup())
-        .findVarHandle(classOf[String], "value", classOf[Array[Byte]])
-    catch
-      case th: Throwable =>
-        throw new ExceptionInInitializerError(
-          new IllegalStateException(
-            "Cannot access String.value, which bloomfilter needs to hash strings " +
-              "without copying them. Run the JVM with --add-opens java.base/java.lang=ALL-UNNAMED.",
-            th
-          )
-        )
+  /**
+   * Opt-in String hashing over the JDK's private backing byte array.
+   *
+   * Selecting this instance requires
+   * `--add-opens=java.base/java.lang=ALL-UNNAMED`. Its hashes depend on the
+   * JVM's String representation, so a filter must use the same instance and
+   * JVM configuration for all reads and writes.
+   */
+  object UnsafeCompact:
+    given stringHash: Hash[String] = UnsafeStringHash.instance

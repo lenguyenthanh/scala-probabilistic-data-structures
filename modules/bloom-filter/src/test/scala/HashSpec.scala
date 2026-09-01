@@ -1,37 +1,91 @@
 package se.thanh.pds.bloomfilter
 
-import java.nio.charset.StandardCharsets
+import se.thanh.pds.bloomfilter.internal.hashing.MurmurHash3
+
+import scala.util.Random
 
 class HashSpec extends munit.FunSuite:
 
-  test("hashing a String is stable across calls"):
-    for s <- List("", "a", "hello", "héllo wörld", "日本語", "日本語です、これはテスト") do
-      assertEquals(Hash[String].hash(s), Hash[String].hash(s), s"'$s'")
+  private val edgeCases = List(
+    "",
+    "\u0000",
+    "a\u0000b",
+    "hello",
+    "h\u00e9llo \u00ff",
+    "\u65e5\u672c\u8a9e",
+    "\u0100abc",
+    "abc\u0100",
+    "\ud83d\ude00",
+    "x\ud83d\ude00y",
+    "\ud800",
+    "\udc00",
+    "a\ud800b",
+    "a\udc00b"
+  )
 
-  test("hashing a String is stable across separately-built equal instances"):
-    val a = "lichess"
-    val b = new String(Array('l', 'i', 'c', 'h', 'e', 's', 's'))
-    assertEquals(a, b)
-    assertEquals(Hash[String].hash(a), Hash[String].hash(b))
+  test("the default String hash has frozen UTF-16LE vectors"):
+    val vectors = List(
+      ""                   -> 0L,
+      "hello"              -> 7620464346463930955L,
+      "\u65e5\u672c\u8a9e" -> 437889797428208642L
+    )
 
-  /* Hashing `from.length` -- the char count -- over a backing array that holds two bytes per
-   * char for non-Latin-1 content fed only the first half of the array to the hash, so a
-   * string and its own first half hashed identically.
-   */
-  test("hashing a String covers the whole backing array for non-Latin-1 input"):
-    assertNotEquals(Hash[String].hash("日本語"), Hash[String].hash("日"))
-    assertNotEquals(Hash[String].hash("日本語です、これはテスト"), Hash[String].hash("日本語です"))
+    vectors.foreach: (value, expected) =>
+      assertEquals(Hash[String].hash(value), expected, clue(value))
 
-  test("hashing a String distinguishes strings differing only in their second half"):
-    assertNotEquals(Hash[String].hash("あいうえお"), Hash[String].hash("あいうかき"))
+  test("the default String hash uses logical UTF-16LE for representative content"):
+    edgeCases.foreach: value =>
+      assertEquals(Hash[String].hash(value), hashBytes(utf16LeBytes(value), 0), clue(value))
 
-  test("hashing a String distinguishes Latin-1 strings"):
-    val hashes = List("alice", "bob", "carol", "dave", "erin").map(Hash[String].hash)
-    assertEquals(hashes.distinct.size, hashes.size)
+  test("the default String hash uses logical UTF-16LE for randomized code units"):
+    val random = new Random(0L)
+    var sample = 0
+    while sample < 1000 do
+      val value = randomValue(random, sample)
+      assertEquals(Hash[String].hash(value), hashBytes(utf16LeBytes(value), 0), s"sample $sample")
+      sample += 1
 
-  test("hashing Array[Byte] agrees with hashing the same bytes as a Latin-1 String"):
-    // A Latin-1 String's backing array is exactly its ISO-8859-1 encoding, so the two
-    // typeclass instances must see identical bytes and produce identical hashes.
-    val s     = "hello world"
-    val bytes = s.getBytes(StandardCharsets.ISO_8859_1)
-    assertEquals(Hash[String].hash(s), Hash[Array[Byte]].hash(bytes))
+  test("the UTF-16LE String entry point preserves nonzero Murmur seeds"):
+    val seeds = List(Int.MinValue, -1, 1, 42, Int.MaxValue)
+    for
+      value <- edgeCases
+      seed  <- seeds
+    do
+      assertEquals(
+        MurmurHash3.murmurhash3_x64_64_utf16le(value, seed),
+        hashBytes(utf16LeBytes(value), seed)
+      )
+
+  test("the default does not use the old compact Latin-1 representation"):
+    val value       = "hello world"
+    val latin1Bytes = value.map(_.toByte).toArray
+    assertNotEquals(
+      Hash[String].hash(value),
+      hashBytes(latin1Bytes, 0)
+    )
+
+  private def hashBytes(bytes: Array[Byte], seed: Int): Long =
+    MurmurHash3.murmurhash3_x64_64(bytes, 0, bytes.length, seed)
+
+  private def randomValue(random: Random, shape: Int): String =
+    val length = random.nextInt(300)
+    val chars  = Math.floorMod(shape, 6) match
+      case 0 => Array.fill(length)(random.nextInt(0x100).toChar)
+      case 1 => Array.fill(length)((0x4e00 + random.nextInt(1000)).toChar)
+      case 2 => Array.fill(length)(random.nextInt(0x10000).toChar)
+      case 3 => Array.tabulate(length)(i => if i % 2 == 0 then '\ud83d' else '\ude00')
+      case 4 =>
+        Array.tabulate(length)(i => if i == length - 1 then '\u4e00' else random.nextInt(0x80).toChar)
+      case _ =>
+        Array.tabulate(length)(i => if i == length / 2 then '\u0000' else random.nextInt(0x100).toChar)
+    new String(chars)
+
+  private def utf16LeBytes(value: String): Array[Byte] =
+    val bytes = new Array[Byte](value.length * 2)
+    var i     = 0
+    while i < value.length do
+      val codeUnit = value.charAt(i)
+      bytes(i * 2) = codeUnit.toByte
+      bytes(i * 2 + 1) = (codeUnit >>> 8).toByte
+      i += 1
+    bytes

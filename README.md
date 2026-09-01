@@ -11,7 +11,8 @@ is a mutable Bloom filter with on-heap and off-heap storage.
 See the [documentation](https://lenguyenthanh.github.io/scala-probabilistic-data-structures/)
 for installation and a quickstart.
 
-## Development
-
-Run the tests with `sbt test`, or preview the documentation locally with
-`sbt docs/tlSitePreview`.
+The default `Hash[String]` is allocation-free and requires no JVM access flags on Java 18+. An
+explicit `Hash.UnsafeCompact` instance is available for long Latin-1-heavy workloads, but it requires
+`--add-opens=java.base/java.lang=ALL-UNNAMED` and hashes the JVM's private String backing bytes. Its
+results depend on the JVM's compact-string configuration and layout, so a filter must use the same
+hasher and JVM configuration for every write and query.

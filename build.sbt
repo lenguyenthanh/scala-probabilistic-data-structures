@@ -36,8 +36,7 @@ lazy val bloomFilter = project
       "org.scalameta" %% "munit-scalacheck" % "1.3.0" % Test,
       "org.typelevel" %% "discipline-munit" % "2.0.0" % Test
     ),
-    Test / fork := true,
-    Test / javaOptions += "--add-opens=java.base/java.lang=ALL-UNNAMED"
+    Test / fork := true
   )
 
 lazy val benchmark = project

@@ -85,7 +85,56 @@ private[bloomfilter] object MurmurHash3:
       k1 *= c2
       h1 ^= k1
 
-    h1 ^= len; h2 ^= len
+    finish64(h1, h2, len)
+
+  /** Hashes the logical UTF-16 code units of `key` as little-endian bytes without allocating. */
+  def murmurhash3_x64_64_utf16le(key: String, seed: Int): Long =
+    val length     = key.length
+    val roundedEnd = length & 0xfffffff8
+    var h1         = seed & 0x00000000ffffffffL
+    var h2         = seed & 0x00000000ffffffffL
+    var i          = 0
+
+    while i < roundedEnd do
+      var k1 = getUtf16LeLong(key, i, 4)
+      var k2 = getUtf16LeLong(key, i + 4, 4)
+      k1 *= c1; k1 = rotateLeft(k1, 31); k1 *= c2; h1 ^= k1
+      h1 = rotateLeft(h1, 27); h1 += h2; h1 = h1 * 5 + 0x52dce729
+      k2 *= c2; k2 = rotateLeft(k2, 33); k2 *= c1; h2 ^= k2
+      h2 = rotateLeft(h2, 31); h2 += h1; h2 = h2 * 5 + 0x38495ab5
+
+      i += 8
+
+    val remaining = length - roundedEnd
+    var k1        = getUtf16LeLong(key, roundedEnd, math.min(remaining, 4))
+    var k2        =
+      if remaining > 4 then getUtf16LeLong(key, roundedEnd + 4, remaining - 4)
+      else 0L
+
+    if remaining > 4 then
+      k2 *= c2
+      k2 = rotateLeft(k2, 33)
+      k2 *= c1
+      h2 ^= k2
+    if remaining > 0 then
+      k1 *= c1
+      k1 = rotateLeft(k1, 31)
+      k1 *= c2
+      h1 ^= k1
+
+    finish64(h1, h2, length * 2)
+
+  private inline def getUtf16LeLong(key: String, offset: Int, count: Int): Long =
+    var result = 0L
+    var i      = 0
+    while i < count do
+      result |= (key.charAt(offset + i).toLong & 0xffffL) << (i * 16)
+      i += 1
+    result
+
+  private def finish64(initialH1: Long, initialH2: Long, length: Int): Long =
+    var h1 = initialH1 ^ length
+    var h2 = initialH2 ^ length
 
     h1 += h2
     h2 += h1

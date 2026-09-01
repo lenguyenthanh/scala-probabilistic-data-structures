@@ -8,19 +8,7 @@ memory use and performance. It currently includes on-heap and off-heap Bloom fil
 - Java 18 or newer
 - Scala 3
 
-The built-in hashing implementation requires access to `java.lang.String` internals. Start the JVM
-with:
-
-```text
---add-opens=java.base/java.lang=ALL-UNNAMED
-```
-
-For a forked sbt application, for example:
-
-```scala
-Compile / run / fork := true
-Compile / run / javaOptions += "--add-opens=java.base/java.lang=ALL-UNNAMED"
-```
+Default use on Java 18 and newer requires no JVM flags.
 
 ## Installation
 
@@ -54,6 +42,49 @@ filter.falsePositiveRate()
 
 Built-in `Hash` instances are provided for `Long`, `String`, and `Array[Byte]`.
 
+## String hashing
+
+The default `Hash[String]` applies MurmurHash3 with seed zero to the String's logical UTF-16 code
+units in little-endian byte order. It is allocation-free, uses only public Java APIs, preserves lone
+surrogate code units, and has the same result regardless of the JVM's compact-string mode or native
+byte order.
+
+Applications that prioritize hashing speed for long Latin-1 strings can explicitly select the
+private-JDK implementation:
+
+```scala
+import se.thanh.pds.bloomfilter.{ BloomFilter, Hash }
+import Hash.UnsafeCompact.given
+
+val filter = BloomFilter[String](numberOfItems = 1_000L, falsePositiveRate = 0.01)
+```
+
+`Hash.UnsafeCompact` requires this exact JVM option and fails during selection if access is not
+available:
+
+```text
+--add-opens=java.base/java.lang=ALL-UNNAMED
+```
+
+For a forked sbt application, for example:
+
+```scala
+Compile / run / fork := true
+Compile / run / javaOptions += "--add-opens=java.base/java.lang=ALL-UNNAMED"
+```
+
+The unsafe instance hashes the private `String.value` byte array directly, preserving the previous
+hasher's representation-dependent behavior. With compact strings enabled this normally means one
+byte per Latin-1 code unit; disabling compact strings changes those hashes because the backing array
+changes. JVM layout and byte-order differences can change hashes as well.
+
+@:callout(warning)
+Hasher selection and JVM String representation are part of a Bloom filter's data format. The default
+and `UnsafeCompact` hashes can differ, so do not use one hasher to query an existing persisted or
+off-heap filter populated with the other. Every reader and writer must select the same given, and
+`UnsafeCompact` users must also keep a compatible JVM configuration.
+@:@
+
 The default implementation is backed by an `Array[Long]`, so it's total bit size is limited
 by nature of JVM Array size limit. So if you want a really really big total bit size, you'll
 need off-heap variant.
@@ -81,25 +112,15 @@ supported Java versions use an `Unsafe`-based implementation.
 
 ## Benchmarks
 
-Latest benchmarks (29/08/2026) on an isolated hardware Intel(R) Core(TM) i7-7700 CPU @ 3.60GHz with JDK 25.
-This is 2/3 times faster the original across implementations.
+The production String hash benchmark covers the `safe` and `unsafe` implementations with ASCII,
+non-ASCII Latin-1, BMP, supplementary, early-wide, and late-wide inputs at 8, 32, 256, and 1024
+UTF-16 code units. Run the matrix with GC profiling:
 
+```text
+sbt "benchmark/Jmh/run -prof gc se.thanh.pds.bloomfilter.benchmark.StringHashBenchmark.*"
+```
 
-```
-[info] StringItemBenchmark.ffmOffHeapAdd        latin1      1024        10  avgt   45  152.815 ± 0.015  ns/op
-[info] StringItemBenchmark.ffmOffHeapAdd         utf16      1024        10  avgt   45  277.790 ± 0.134  ns/op
-[info] StringItemBenchmark.ffmOffHeapGet        latin1      1024        10  avgt   45  153.407 ± 0.960  ns/op
-[info] StringItemBenchmark.ffmOffHeapGet         utf16      1024        10  avgt   45  276.826 ± 0.055  ns/op
-[info] StringItemBenchmark.originalAdd          latin1      1024        10  avgt   45  524.968 ± 0.452  ns/op
-[info] StringItemBenchmark.originalAdd           utf16      1024        10  avgt   45  523.987 ± 0.471  ns/op
-[info] StringItemBenchmark.originalGet          latin1      1024        10  avgt   45  523.736 ± 0.228  ns/op
-[info] StringItemBenchmark.originalGet           utf16      1024        10  avgt   45  522.841 ± 0.238  ns/op
-[info] StringItemBenchmark.onHeapAdd            latin1      1024        10  avgt   45  151.768 ± 0.039  ns/op
-[info] StringItemBenchmark.onHeapAdd             utf16      1024        10  avgt   45  277.623 ± 0.072  ns/op
-[info] StringItemBenchmark.onHeapGet            latin1      1024        10  avgt   45  150.851 ± 0.026  ns/op
-[info] StringItemBenchmark.onHeapGet             utf16      1024        10  avgt   45  276.940 ± 0.031  ns/op
-[info] StringItemBenchmark.unsafeOffHeapAdd     latin1      1024        10  avgt   45  152.085 ± 0.939  ns/op
-[info] StringItemBenchmark.unsafeOffHeapAdd      utf16      1024        10  avgt   45  275.908 ± 0.166  ns/op
-[info] StringItemBenchmark.unsafeOffHeapGet     latin1      1024        10  avgt   45  151.257 ± 0.646  ns/op
-[info] StringItemBenchmark.unsafeOffHeapGet      utf16      1024        10  avgt   45  274.358 ± 0.085  ns/op
-```
+Both paths are intended to allocate effectively zero bytes per hash after setup. The safe default is
+the portable choice. `UnsafeCompact` is expected to have its clearest advantage on long ASCII and
+Latin-1 strings because it hashes the backing bytes directly. Measure on the deployment JDK and CPU
+before accepting private-JDK access and representation-dependent hashes as operational dependencies.
