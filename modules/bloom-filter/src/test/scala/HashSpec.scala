@@ -1,7 +1,8 @@
 package se.thanh.pds.bloomfilter
 
-import se.thanh.pds.bloomfilter.internal.hashing.MurmurHash3
+import se.thanh.pds.bloomfilter.internal.hashing.{ MurmurHash3, StringHashSelector }
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 class HashSpec extends munit.FunSuite:
@@ -23,7 +24,7 @@ class HashSpec extends munit.FunSuite:
     "a\udc00b"
   )
 
-  test("the default String hash has frozen UTF-16LE vectors"):
+  test("the safe String hash has frozen UTF-16LE vectors"):
     val vectors = List(
       ""                   -> 0L,
       "hello"              -> 7620464346463930955L,
@@ -31,18 +32,22 @@ class HashSpec extends munit.FunSuite:
     )
 
     vectors.foreach: (value, expected) =>
-      assertEquals(Hash[String].hash(value), expected, clue(value))
+      assertEquals(Hash.safe.stringHash.hash(value), expected, clue(value))
 
-  test("the default String hash uses logical UTF-16LE for representative content"):
+  test("the safe String hash uses logical UTF-16LE for representative content"):
     edgeCases.foreach: value =>
-      assertEquals(Hash[String].hash(value), hashBytes(utf16LeBytes(value), 0), clue(value))
+      assertEquals(Hash.safe.stringHash.hash(value), hashBytes(utf16LeBytes(value), 0), clue(value))
 
-  test("the default String hash uses logical UTF-16LE for randomized code units"):
+  test("the safe String hash uses logical UTF-16LE for randomized code units"):
     val random = new Random(0L)
     var sample = 0
     while sample < 1000 do
       val value = randomValue(random, sample)
-      assertEquals(Hash[String].hash(value), hashBytes(utf16LeBytes(value), 0), s"sample $sample")
+      assertEquals(
+        Hash.safe.stringHash.hash(value),
+        hashBytes(utf16LeBytes(value), 0),
+        s"sample $sample"
+      )
       sample += 1
 
   test("the UTF-16LE String entry point preserves nonzero Murmur seeds"):
@@ -56,16 +61,81 @@ class HashSpec extends munit.FunSuite:
         hashBytes(utf16LeBytes(value), seed)
       )
 
-  test("the default does not use the old compact Latin-1 representation"):
+  test("the safe String hash does not use the compact Latin-1 representation"):
     val value       = "hello world"
     val latin1Bytes = value.map(_.toByte).toArray
     assertNotEquals(
-      Hash[String].hash(value),
+      Hash.safe.stringHash.hash(value),
       hashBytes(latin1Bytes, 0)
     )
 
+  test("the default selector prefers Unsafe and caches its selection"):
+    val calls    = ListBuffer.empty[String]
+    val selector = new StringHashSelector(
+      () =>
+        calls += "unsafe"; Some(constantHash(1L))
+      ,
+      () =>
+        calls += "varhandle"; Some(constantHash(2L))
+      ,
+      () =>
+        calls += "safe"; constantHash(3L)
+    )
+
+    assertEquals(selector.hash("first"), 1L)
+    assertEquals(selector.hash("second"), 1L)
+    assertEquals(calls.toList, List("unsafe"))
+
+  test("the default selector falls back from Unsafe to VarHandle"):
+    val calls    = ListBuffer.empty[String]
+    val selector = new StringHashSelector(
+      () =>
+        calls += "unsafe"; None
+      ,
+      () =>
+        calls += "varhandle"; Some(constantHash(2L))
+      ,
+      () =>
+        calls += "safe"; constantHash(3L)
+    )
+
+    assertEquals(selector.hash("value"), 2L)
+    assertEquals(calls.toList, List("unsafe", "varhandle"))
+
+  test("the default selector falls back from VarHandle to safe"):
+    val calls    = ListBuffer.empty[String]
+    val selector = new StringHashSelector(
+      () =>
+        calls += "unsafe"; None
+      ,
+      () =>
+        calls += "varhandle"; None
+      ,
+      () =>
+        calls += "safe"; constantHash(3L)
+    )
+
+    assertEquals(selector.hash("value"), 3L)
+    assertEquals(calls.toList, List("unsafe", "varhandle", "safe"))
+
+  test("the default selector propagates fatal candidate failures"):
+    val failure  = new OutOfMemoryError("test failure")
+    val selector = new StringHashSelector(
+      () => throw failure,
+      () => Some(constantHash(2L)),
+      () => constantHash(3L)
+    )
+
+    var thrown: OutOfMemoryError = null
+    try selector.hash("value")
+    catch case cause: OutOfMemoryError => thrown = cause
+    assert(thrown eq failure)
+
   private def hashBytes(bytes: Array[Byte], seed: Int): Long =
     MurmurHash3.murmurhash3_x64_64(bytes, 0, bytes.length, seed)
+
+  private def constantHash(value: Long): Hash[String] = new Hash[String]:
+    override def hash(from: String): Long = value
 
   private def randomValue(random: Random, shape: Int): String =
     val length = random.nextInt(300)

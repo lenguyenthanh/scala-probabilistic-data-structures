@@ -6,7 +6,13 @@ package se.thanh.pds.bloomfilter
  * Licensed under the MIT License.
  */
 
-import se.thanh.pds.bloomfilter.internal.hashing.{ MurmurHash3, PrivateStringHash, UnsafeStringHash }
+import se.thanh.pds.bloomfilter.internal.hashing.{
+  DefaultStringHash,
+  MurmurHash3,
+  PrivateStringHash,
+  SafeStringHash,
+  UnsafeStringHash
+}
 
 trait Hash[A]:
   def hash(from: A): Long
@@ -23,9 +29,16 @@ object Hash extends Hash.DefaultInstances:
       override def hash(from: Array[Byte]): Long =
         MurmurHash3.murmurhash3_x64_64(from, 0, from.length, 0)
 
-    given stringHash: Hash[String] with
-      override def hash(from: String): Long =
-        MurmurHash3.murmurhash3_x64_64_utf16le(from, 0)
+    given stringHash: Hash[String] = DefaultStringHash.instance
+
+  /**
+   * Opt-in safe String hashing over its logical UTF-16 code units.
+   *
+   * This implementation uses only public Java APIs and produces stable hashes
+   * independently of the JVM's compact String representation.
+   */
+  object safe:
+    given stringHash: Hash[String] = SafeStringHash.instance
 
   /**
    * Opt-in String hashing over the JDK's private backing byte array.
@@ -39,12 +52,12 @@ object Hash extends Hash.DefaultInstances:
     given stringHash: Hash[String] = PrivateStringHash.instance
 
   /**
-   * Opt-in String hashing over the sun.misc.Unsafe
+   * Opt-in String hashing over sun.misc.Unsafe.
    *
-   * Selecting this instance requires
-   * `--sun-misc-unsafe-memory-access=deny` flag for jdk >=25. Its hashes
-   * depend on the JVM's String representation, so a filter must use the
-   * same instance and JVM configuration for all reads and writes.
+   * On JDK 24 and later, `--sun-misc-unsafe-memory-access=allow` suppresses
+   * warnings for this access, while `deny` makes this instance unavailable.
+   * Its hashes depend on the JVM's String representation, so a filter must
+   * use the same instance and JVM configuration for all reads and writes.
    */
   object unsafe:
     given stringHash: Hash[String] = UnsafeStringHash.instance

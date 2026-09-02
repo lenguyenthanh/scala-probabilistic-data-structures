@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 class StringHashBenchmark:
 
-  @Param(Array("safe", "unsafe"))
+  @Param(Array("unsafe", "varhandle", "safe"))
   var implementation: String = compiletime.uninitialized
 
   @Param(Array("8", "32", "256", "1024"))
@@ -35,9 +35,12 @@ class StringHashBenchmark:
     value = StringHashBenchmarkData.value(coder, length)
     val expectedBytes = implementation match
       case "safe" =>
-        hasher = Hash[String]
+        hasher = Hash.safe.stringHash
         StringHashBenchmarkData.utf16LeBytes(value)
       case "unsafe" =>
+        hasher = Hash.unsafe.stringHash
+        StringHashBenchmarkData.compactBytes(value)
+      case "varhandle" =>
         hasher = Hash.privateJDK.stringHash
         StringHashBenchmarkData.compactBytes(value)
       case other => throw new IllegalArgumentException(s"unknown implementation: $other")

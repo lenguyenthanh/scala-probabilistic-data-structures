@@ -44,10 +44,27 @@ Built-in `Hash` instances are provided for `Long`, `String`, and `Array[Byte]`.
 
 ## String hashing
 
-The default `Hash[String]` applies MurmurHash3 with seed zero to the String's logical UTF-16 code
-units in little-endian byte order. It is allocation-free, uses only public Java APIs.
+The default `Hash[String]` selects the first available allocation-free implementation in this order:
 
-Applications that prioritize hashing speed can explicitly select the private-JDK implementation:
+1. `sun.misc.Unsafe`
+2. private-JDK `VarHandle`
+3. safe `String.charAt`
+
+The selection happens once, when the default String hasher is first used. `Unsafe` and `VarHandle`
+hash the JVM's compact String backing array, while the safe implementation hashes logical UTF-16
+code units in little-endian byte order. Applications that persist filters or share them between JVMs
+with different configurations should explicitly select one implementation for all reads and writes.
+
+Use `Hash.safe` to pin the public-API-only implementation:
+
+```scala
+import se.thanh.pds.bloomfilter.{ BloomFilter, Hash }
+import Hash.safe.given
+
+val filter = BloomFilter[String](numberOfItems = 1_000L, falsePositiveRate = 0.01)
+```
+
+Use `Hash.privateJDK` to pin the `VarHandle` implementation:
 
 ```scala
 import se.thanh.pds.bloomfilter.{ BloomFilter, Hash }
@@ -65,6 +82,11 @@ available:
 ```
 
 @:@
+
+Use `Hash.unsafe` to pin the `sun.misc.Unsafe` implementation. On JDK 24 and later, Unsafe memory
+access produces a warning by default. `--sun-misc-unsafe-memory-access=allow` suppresses the warning;
+`--sun-misc-unsafe-memory-access=deny` disables this implementation and makes the default continue
+to the `VarHandle` fallback.
 
 ## Off heap BloomFilter
 

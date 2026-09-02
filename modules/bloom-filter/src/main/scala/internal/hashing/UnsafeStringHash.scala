@@ -6,30 +6,43 @@ object UnsafeStringHash:
 
   import sun.misc.Unsafe
   import scala.annotation.nowarn
-  import scala.util.Try
+  import scala.util.control.NonFatal
 
-  def instance: Hash[String] = new UnsafeStringHash
+  def instance: Hash[String] =
+    try initialize()
+    catch
+      case cause: LinkageError => throw unavailable(cause)
+      case NonFatal(cause)     => throw unavailable(cause)
 
-  private val unsafe: Unsafe = Try {
-    classOf[Unsafe].getDeclaredFields
+  private[bloomfilter] def tryInstance: Option[Hash[String]] =
+    try Some(instance)
+    catch
+      case _: LinkageError => None
+      case NonFatal(_)     => None
+
+  @nowarn("cat=deprecation")
+  private def initialize(): Hash[String] =
+    val unsafe = classOf[Unsafe].getDeclaredFields
       .find(_.getType == classOf[Unsafe])
       .map: field =>
         field.setAccessible(true)
         field.get(null).asInstanceOf[Unsafe]
       .getOrElse(throw new IllegalStateException("cannot find sun.misc.Unsafe instance"))
-  }.recover { case cause: Throwable =>
-    throw new ExceptionInInitializerError(cause)
-  }.get
+    val stringValueOffset = unsafe.objectFieldOffset(classOf[String].getDeclaredField("value"))
+    val instance          = new UnsafeStringHash(unsafe, stringValueOffset)
+    instance.hash("")
+    instance
+
+  private def unavailable(cause: Throwable): IllegalStateException =
+    new IllegalStateException(
+      "Hash.unsafe is unavailable on this JVM. " +
+        "On supported JDKs, ensure sun.misc.Unsafe memory access is allowed.",
+      cause
+    )
 
   @nowarn("cat=deprecation")
-  private val stringValueOffset: Long =
-    unsafe.objectFieldOffset(classOf[String].getDeclaredField("value"))
-
-  private inline def stringValue(from: String): Array[Byte] =
-    unsafe.getObject(from, stringValueOffset).asInstanceOf[Array[Byte]]
-
-  final private class UnsafeStringHash extends Hash[String]:
+  final private class UnsafeStringHash(unsafe: Unsafe, stringValueOffset: Long) extends Hash[String]:
 
     override def hash(from: String): Long =
-      val value = stringValue(from)
+      val value = unsafe.getObject(from, stringValueOffset).asInstanceOf[Array[Byte]]
       MurmurHash3.murmurhash3_x64_64(value, 0, value.length, 0)

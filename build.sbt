@@ -11,7 +11,8 @@ ThisBuild / developers        := List(
 ThisBuild / githubWorkflowJavaVersions := Seq(
   JavaSpec.temurin("18"),
   JavaSpec.temurin("21"),
-  JavaSpec.temurin("25")
+  JavaSpec.temurin("25"),
+  JavaSpec.temurin("26")
 )
 ThisBuild / tlCiMimaBinaryIssueCheck            := true
 ThisBuild / tlCiDependencyGraphJob              := false
