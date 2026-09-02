@@ -6,7 +6,7 @@ package se.thanh.pds.bloomfilter
  * Licensed under the MIT License.
  */
 
-import se.thanh.pds.bloomfilter.internal.hashing.{ MurmurHash3, PrivateStringHash }
+import se.thanh.pds.bloomfilter.internal.hashing.{ MurmurHash3, PrivateStringHash, UnsafeStringHash }
 
 trait Hash[A]:
   def hash(from: A): Long
@@ -37,3 +37,14 @@ object Hash extends Hash.DefaultInstances:
    */
   object privateJDK:
     given stringHash: Hash[String] = PrivateStringHash.instance
+
+  /**
+   * Opt-in String hashing over the sun.misc.Unsafe
+   *
+   * Selecting this instance requires
+   * `--sun-misc-unsafe-memory-access=deny` flag for jdk >=25. Its hashes
+   * depend on the JVM's String representation, so a filter must use the
+   * same instance and JVM configuration for all reads and writes.
+   */
+  object unsafe:
+    given stringHash: Hash[String] = UnsafeStringHash.instance
