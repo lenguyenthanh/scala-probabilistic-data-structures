@@ -37,7 +37,12 @@ lazy val bloomFilter = project
       "org.scalameta" %% "munit-scalacheck" % "1.3.0" % Test,
       "org.typelevel" %% "discipline-munit" % "2.0.0" % Test
     ),
-    Test / fork := true
+    Test / testFrameworks += new TestFramework("munit.internal.junitinterface.JUnitFramework"),
+    Test / fork         := true,
+    Test / testGrouping := HashTestMatrix.groups(
+      (Test / definedTests).value,
+      (Test / forkOptions).value
+    )
   )
 
 lazy val benchmark = project
