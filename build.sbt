@@ -11,7 +11,8 @@ ThisBuild / developers        := List(
 ThisBuild / githubWorkflowJavaVersions := Seq(
   JavaSpec.temurin("18"),
   JavaSpec.temurin("21"),
-  JavaSpec.temurin("25")
+  JavaSpec.temurin("25"),
+  JavaSpec.temurin("26")
 )
 ThisBuild / tlCiMimaBinaryIssueCheck            := true
 ThisBuild / tlCiDependencyGraphJob              := false
@@ -36,8 +37,12 @@ lazy val bloomFilter = project
       "org.scalameta" %% "munit-scalacheck" % "1.3.0" % Test,
       "org.typelevel" %% "discipline-munit" % "2.0.0" % Test
     ),
-    Test / fork := true,
-    Test / javaOptions += "--add-opens=java.base/java.lang=ALL-UNNAMED"
+    Test / testFrameworks += new TestFramework("munit.internal.junitinterface.JUnitFramework"),
+    Test / fork         := true,
+    Test / testGrouping := HashTestMatrix.groups(
+      (Test / definedTests).value,
+      (Test / forkOptions).value
+    )
   )
 
 lazy val benchmark = project
