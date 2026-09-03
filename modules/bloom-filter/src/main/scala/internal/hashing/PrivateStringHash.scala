@@ -7,46 +7,25 @@ import scala.util.control.NonFatal
 
 private[bloomfilter] object PrivateStringHash:
 
+  def instance: Either[Throwable, Hash[String]] =
+    try
+      val lookup =
+        MethodHandles.privateLookupIn(classOf[String], MethodHandles.lookup())
+      val stringValue: VarHandle =
+        lookup.findVarHandle(classOf[String], "value", classOf[Array[Byte]])
+      val instance = new PrivateStringHash(stringValue)
+      instance.hash("t")
+      Right(instance)
+    catch case NonFatal(cause) => Left(unavailable(cause))
+
   private inline val RequiredFlag =
     "--add-opens=java.base/java.lang=ALL-UNNAMED"
 
-  def instance: Hash[String] = initialize()
+  private val message: String =
+    s"Hash.strings.privateJDK requires private JDK access. Start the JVM with $RequiredFlag."
 
-  private[bloomfilter] def tryInstance: Option[Hash[String]] =
-    try Some(instance)
-    catch
-      case _: LinkageError => None
-      case NonFatal(_)     => None
-
-  private def initialize(): Hash[String] =
-
-    val lookup =
-      try MethodHandles.privateLookupIn(classOf[String], MethodHandles.lookup())
-      catch
-        case NonFatal(cause) =>
-          throw new IllegalStateException(
-            s"Hash.privateJDK requires private JDK access. Start the JVM with $RequiredFlag.",
-            cause
-          )
-
-    val stringValue: VarHandle =
-      try lookup.findVarHandle(classOf[String], "value", classOf[Array[Byte]])
-      catch
-        case NonFatal(cause) =>
-          throw new IllegalStateException(
-            "Hash.privateJDK is incompatible with this JDK's String layout.",
-            cause
-          )
-
-    val instance = new PrivateStringHash(stringValue)
-    try instance.hash("")
-    catch
-      case NonFatal(cause) =>
-        throw new IllegalStateException(
-          "Hash.privateJDK cannot read this JDK's String backing array.",
-          cause
-        )
-    instance
+  private def unavailable(cause: Throwable): IllegalStateException =
+    new IllegalStateException(message, cause)
 
   final private class PrivateStringHash(stringValue: VarHandle) extends Hash[String]:
     override def hash(from: String): Long =

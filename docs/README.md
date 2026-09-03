@@ -55,26 +55,28 @@ hash the JVM's compact String backing array, while the safe implementation hashe
 code units in little-endian byte order. Applications that persist filters or share them between JVMs
 with different configurations should explicitly select one implementation for all reads and writes.
 
-Use `Hash.safe` to pin the public-API-only implementation:
+Use `Hash.strings.safe` to pin the public-API-only implementation:
 
 ```scala
 import se.thanh.pds.bloomfilter.{ BloomFilter, Hash }
-import Hash.safe.given
 
-val filter = BloomFilter[String](numberOfItems = 1_000L, falsePositiveRate = 0.01)
+val filter = BloomFilter[String](numberOfItems = 1_000L, falsePositiveRate = 0.01)(using
+  Hash.strings.safe
+)
 ```
 
-Use `Hash.privateJDK` to pin the `VarHandle` implementation:
+Use `Hash.strings.privateJDK` to pin the `VarHandle` implementation:
 
 ```scala
 import se.thanh.pds.bloomfilter.{ BloomFilter, Hash }
-import Hash.privateJDK.given
 
-val filter = BloomFilter[String](numberOfItems = 1_000L, falsePositiveRate = 0.01)
+val filter = BloomFilter[String](numberOfItems = 1_000L, falsePositiveRate = 0.01)(using
+  Hash.strings.privateJDK
+)
 ```
 
 @:callout(warning)
-`Hash.privateJDK` requires this exact JVM option and fails during selection if access is not
+`Hash.strings.privateJDK` requires this exact JVM option and fails during selection if access is not
 available:
 
 ```text
@@ -83,10 +85,10 @@ available:
 
 @:@
 
-Use `Hash.unsafe` to pin the `sun.misc.Unsafe` implementation. On JDK 24 and later, Unsafe memory
-access produces a warning by default. `--sun-misc-unsafe-memory-access=allow` suppresses the warning;
-`--sun-misc-unsafe-memory-access=deny` disables this implementation and makes the default continue
-to the `VarHandle` fallback.
+Use `Hash.strings.unsafe` to pin the `sun.misc.Unsafe` implementation. On JDK 24 and later, Unsafe
+memory access produces a warning by default. `--sun-misc-unsafe-memory-access=allow` suppresses the
+warning; `--sun-misc-unsafe-memory-access=deny` disables this implementation and makes the default
+continue to the `VarHandle` fallback.
 
 ## Off heap BloomFilter
 

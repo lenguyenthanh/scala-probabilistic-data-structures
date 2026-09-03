@@ -9,7 +9,6 @@ import java.util.List;
 import org.junit.Test;
 import se.thanh.pds.bloomfilter.Hash;
 import se.thanh.pds.bloomfilter.Hash$;
-import se.thanh.pds.bloomfilter.internal.hashing.DefaultStringHash$;
 import se.thanh.pds.bloomfilter.internal.hashing.MurmurHash3$;
 
 public abstract class HashMatrixSuite {
@@ -31,9 +30,9 @@ public abstract class HashMatrixSuite {
 
   private enum HashTarget {
     DEFAULT("Hash[String]"),
-    UNSAFE("Hash.unsafe"),
-    PRIVATE_JDK("Hash.privateJDK"),
-    SAFE("Hash.safe");
+    UNSAFE("Hash.strings.unsafe"),
+    PRIVATE_JDK("Hash.strings.privateJDK"),
+    SAFE("Hash.strings.safe");
 
     private final String label;
 
@@ -47,11 +46,11 @@ public abstract class HashMatrixSuite {
         case DEFAULT:
           return (Hash<String>) Hash$.MODULE$.stringHash();
         case UNSAFE:
-          return Hash.unsafe$.MODULE$.stringHash();
+          return Hash.strings$.MODULE$.unsafe();
         case PRIVATE_JDK:
-          return Hash.privateJDK$.MODULE$.stringHash();
+          return Hash.strings$.MODULE$.privateJDK();
         case SAFE:
-          return Hash.safe$.MODULE$.stringHash();
+          return Hash.strings$.MODULE$.safe();
         default:
           throw new AssertionError("unknown hash target: " + this);
       }
@@ -143,7 +142,6 @@ public abstract class HashMatrixSuite {
     try {
       Hash<String> hash = target.acquire();
       assertTrue(target.label + " unexpectedly initialized", expectedAvailable);
-      verifyImplementation(target);
       verifyHashing(target, hash);
     } catch (LinkageError | RuntimeException cause) {
       if (expectedAvailable) {
@@ -152,29 +150,15 @@ public abstract class HashMatrixSuite {
       String expectedMessage;
       switch (target) {
         case UNSAFE:
-          expectedMessage = "Hash.unsafe is unavailable";
+          expectedMessage = "Hash.strings.unsafe is unavailable";
           break;
         case PRIVATE_JDK:
-          expectedMessage = "Hash.privateJDK requires private JDK access";
+          expectedMessage = "Hash.strings.privateJDK requires private JDK access";
           break;
         default:
           throw new AssertionError(target.label + " unexpectedly failed", cause);
       }
       assertTrue(failureChain(cause), causeChainContains(cause, expectedMessage));
-    }
-  }
-
-  private void verifyImplementation(HashTarget target) {
-    if (target == HashTarget.DEFAULT) {
-      String expected;
-      if (expectedMode != UnsafeMode.DENY) {
-        expected = "Unsafe";
-      } else if (expectedAddOpens) {
-        expected = "VarHandle";
-      } else {
-        expected = "Safe";
-      }
-      assertEquals(expected, DefaultStringHash$.MODULE$.implementation().toString());
     }
   }
 

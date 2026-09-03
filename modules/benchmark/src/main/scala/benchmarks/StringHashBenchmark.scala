@@ -35,13 +35,13 @@ class StringHashBenchmark:
     value = StringHashBenchmarkData.value(coder, length)
     val expectedBytes = implementation match
       case "safe" =>
-        hasher = Hash.safe.stringHash
+        hasher = Hash.strings.safe
         StringHashBenchmarkData.utf16LeBytes(value)
       case "unsafe" =>
-        hasher = Hash.unsafe.stringHash
+        hasher = Hash.strings.unsafe
         StringHashBenchmarkData.compactBytes(value)
       case "varhandle" =>
-        hasher = Hash.privateJDK.stringHash
+        hasher = Hash.strings.privateJDK
         StringHashBenchmarkData.compactBytes(value)
       case other => throw new IllegalArgumentException(s"unknown implementation: $other")
     val expected = Hash[Array[Byte]].hash(expectedBytes)
