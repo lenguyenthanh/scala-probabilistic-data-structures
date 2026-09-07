@@ -11,7 +11,7 @@ import internal.types.*
 
 @Fork(
   value = 1,
-  jvmArgsAppend = Array("-Xmx1G", "--add-opens=java.base/java.lang=ALL-UNNAMED")
+  jvmArgsAppend = Array("-Xmx1G")
 )
 @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 @State(Scope.Thread)
