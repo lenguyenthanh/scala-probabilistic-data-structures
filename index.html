@@ -82,7 +82,11 @@
     <li class="level1 nav-leaf"><a href="#requirements">Requirements</a></li>
     <li class="level1 nav-leaf"><a href="#installation">Installation</a></li>
     <li class="level1 nav-leaf"><a href="#quickstart">Quickstart</a></li>
-    <li class="level1 nav-leaf"><a href="#benchmarks">Benchmarks</a></li>
+    <li class="level1 nav-leaf"><a href="#string-hashing">String hashing</a></li>
+    <li class="level1 nav-leaf"><a href="#off-heap-bloomfilter">Off heap BloomFilter</a></li>
+    <li class="level1 nav-node"><a href="#benchmarks">Benchmarks</a></li>
+    <li class="level2 nav-leaf"><a href="#bloomfilter-string-with-defaut-unsafe-string-hash-implementation"><code>BloomFilter[String]</code> with defaut (<code>Unsafe</code>) string hash implementation</a></li>
+    <li class="level2 nav-leaf"><a href="#string-hash-implementations">String hash implementations</a></li>
   </ul>
 
   <p class="footer"></p>
@@ -100,12 +104,7 @@
           <li>Java 18 or newer</li>
           <li>Scala 3</li>
         </ul>
-        <p>The built-in hashing implementation requires access to <code>java.lang.String</code> internals. Start the JVM
-        with:</p>
-        <pre class="keep-together pdf epub"><code class="text">--add-opens=java.base/java.lang=ALL-UNNAMED</code></pre>
-        <p>For a forked sbt application, for example:</p>
-        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="type-name">Compile</span><span> / </span><span class="identifier">run</span><span> / </span><span class="identifier">fork</span><span> := </span><span class="boolean-literal">true</span><span>
-</span><span class="type-name">Compile</span><span> / </span><span class="identifier">run</span><span> / </span><span class="identifier">javaOptions</span><span> += </span><span class="string-literal">&quot;--add-opens=java.base/java.lang=ALL-UNNAMED&quot;</span></code></pre>
+        <p>Default use on Java 18 and newer requires no JVM flags.</p>
         
         <h2 id="installation" class="section"><a class="anchor-link left" href="#installation"><i class="icofont-laika link">&#xef71;</i></a>Installation</h2>
         <p>Only available from <a href="https://jitpack.io/#lenguyenthanh/scala-probabilistic-data-structures">JitPack</a> <strong>for now</strong>.
@@ -117,13 +116,13 @@
     </span><span class="string-literal">&quot;bloom-filter&quot;</span><span> % </span><span class="string-literal">&quot;&lt;tag-or-commit&gt;&quot;</span></code></pre>
         
         <h2 id="quickstart" class="section"><a class="anchor-link left" href="#quickstart"><i class="icofont-laika link">&#xef71;</i></a>Quickstart</h2>
-        <p><code>BloomFilter</code> sizes itself from the expected number of inserted items and the desired false-positive
-        rate. The filter may report a false positive, but it does not report false negatives for items that
-        have been added.</p>
+        <p><code>BloomFilter</code> calculates optimal size and number of hashes by itself from the expected number of inserted
+        items and the desired false-positive rate. The filter may report a false positive, but it does not report
+        false negatives for items that have been added.</p>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">se</span><span>.</span><span class="identifier">thanh</span><span>.</span><span class="identifier">pds</span><span>.</span><span class="identifier">bloomfilter</span><span>.</span><span class="type-name">BloomFilter</span><span>
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">filter</span><span> = </span><span class="type-name">BloomFilter</span><span>[</span><span class="type-name">Long</span><span>](</span><span class="identifier">numberOfItems</span><span> = </span><span class="number-literal">1_000L</span><span>, </span><span class="identifier">falsePositiveRate</span><span> = </span><span class="number-literal">0.01</span><span>)
-</span><span class="comment">// filter: BloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$BloomFilterImpl@2ca011a0
+</span><span class="comment">// filter: BloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$BloomFilterImpl@4c1c5773
 </span><span>
 </span><span class="identifier">filter</span><span>.</span><span class="identifier">add</span><span>(</span><span class="number-literal">17L</span><span>)
 </span><span class="identifier">filter</span><span>.</span><span class="identifier">contains</span><span>(</span><span class="number-literal">17L</span><span>)
@@ -133,6 +132,42 @@
 </span><span class="identifier">filter</span><span>.</span><span class="identifier">falsePositiveRate</span><span>()
 </span><span class="comment">// res3: Double = 1.095942196882938E-22</span></code></pre>
         <p>Built-in <code>Hash</code> instances are provided for <code>Long</code>, <code>String</code>, and <code>Array[Byte]</code>.</p>
+        
+        <h2 id="string-hashing" class="section"><a class="anchor-link left" href="#string-hashing"><i class="icofont-laika link">&#xef71;</i></a>String hashing</h2>
+        <p>The default <code>Hash[String]</code> selects the first available allocation-free implementation in this order:</p>
+        <ol class="arabic">
+          <li><code>sun.misc.Unsafe</code></li>
+          <li>private-JDK <code>VarHandle</code></li>
+          <li>safe <code>String.charAt</code></li>
+        </ol>
+        <p>The selection happens once, when the default String hasher is first used. <code>Unsafe</code> and <code>VarHandle</code>
+        hash the JVM&#39;s private String backing array, while the safe implementation hashes logical UTF-16
+        code units in little-endian byte order. Applications that persist filters or share them between JVMs
+        with different configurations should explicitly select one implementation for all reads and writes.</p>
+        <p>Use <code>Hash.strings.safe</code> to pin the public-API-only implementation:</p>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">se</span><span>.</span><span class="identifier">thanh</span><span>.</span><span class="identifier">pds</span><span>.</span><span class="identifier">bloomfilter</span><span>.{ </span><span class="type-name">BloomFilter</span><span>, </span><span class="type-name">Hash</span><span> }
+
+</span><span class="keyword">val</span><span> </span><span class="identifier">filter</span><span> = </span><span class="type-name">BloomFilter</span><span>[</span><span class="type-name">String</span><span>](</span><span class="identifier">numberOfItems</span><span> = </span><span class="number-literal">1_000L</span><span>, </span><span class="identifier">falsePositiveRate</span><span> = </span><span class="number-literal">0.01</span><span>)(</span><span class="identifier">using</span><span>
+  </span><span class="type-name">Hash</span><span>.</span><span class="identifier">strings</span><span>.</span><span class="identifier">safe</span><span>
+)</span></code></pre>
+        <p>Use <code>Hash.strings.privateJDK</code> to pin the <code>VarHandle</code> implementation:</p>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">se</span><span>.</span><span class="identifier">thanh</span><span>.</span><span class="identifier">pds</span><span>.</span><span class="identifier">bloomfilter</span><span>.{ </span><span class="type-name">BloomFilter</span><span>, </span><span class="type-name">Hash</span><span> }
+
+</span><span class="keyword">val</span><span> </span><span class="identifier">filter</span><span> = </span><span class="type-name">BloomFilter</span><span>[</span><span class="type-name">String</span><span>](</span><span class="identifier">numberOfItems</span><span> = </span><span class="number-literal">1_000L</span><span>, </span><span class="identifier">falsePositiveRate</span><span> = </span><span class="number-literal">0.01</span><span>)(</span><span class="identifier">using</span><span>
+  </span><span class="type-name">Hash</span><span>.</span><span class="identifier">strings</span><span>.</span><span class="identifier">privateJDK</span><span>
+)</span></code></pre>
+        <div class="callout warning">
+          <i class="icofont-laika warning">&#xf026;</i>
+          <p><code>Hash.strings.privateJDK</code> requires this exact JVM option and fails during selection if access is not
+          available:</p>
+          <pre class="keep-together pdf epub"><code class="text">--add-opens=java.base/java.lang=ALL-UNNAMED</code></pre>
+        </div>
+        <p>Use <code>Hash.strings.unsafe</code> to pin the <code>sun.misc.Unsafe</code> implementation. On JDK 24 and later, Unsafe
+        memory access produces a warning by default. <code>--sun-misc-unsafe-memory-access=allow</code> suppresses the
+        warning; <code>--sun-misc-unsafe-memory-access=deny</code> disables this implementation and makes the default
+        continue to the <code>VarHandle</code> fallback.</p>
+        
+        <h2 id="off-heap-bloomfilter" class="section"><a class="anchor-link left" href="#off-heap-bloomfilter"><i class="icofont-laika link">&#xef71;</i></a>Off heap BloomFilter</h2>
         <p>The default implementation is backed by an <code>Array[Long]</code>, so it&#39;s total bit size is limited
         by nature of JVM Array size limit. So if you want a really really big total bit size, you&#39;ll
         need off-heap variant.</p>
@@ -141,10 +176,15 @@
           <p>Off-heap BloomFilter use <code>Unsafe</code> or <code>Foreign Memory</code> to allocate memory off-heap (hence the name),
           there fore you have to trigger the release of memory manually by callling <code>close()</code> after use.</p>
         </div>
+        <div class="callout info">
+          <i class="icofont-laika info">&#xef4e;</i>
+          <p>On Java 22 and newer the off-heap implementation uses the Foreign Function and Memory API. Earlier
+          supported Java versions use an <code>Unsafe</code>-based implementation.</p>
+        </div>
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">se</span><span>.</span><span class="identifier">thanh</span><span>.</span><span class="identifier">pds</span><span>.</span><span class="identifier">bloomfilter</span><span>.</span><span class="type-name">BloomFilter</span><span>
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">offHeap</span><span> = </span><span class="type-name">BloomFilter</span><span>.</span><span class="identifier">offHeap</span><span>[</span><span class="type-name">Long</span><span>](</span><span class="number-literal">1_000L</span><span>, </span><span class="number-literal">0.01</span><span>)
-</span><span class="comment">// offHeap: OffHeapBloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$OffHeapBloomFilterImpl@19021d27
+</span><span class="comment">// offHeap: OffHeapBloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$OffHeapBloomFilterImpl@6a56dd59
 </span><span class="identifier">offHeap</span><span>.</span><span class="identifier">add</span><span>(</span><span class="number-literal">17L</span><span>)
 </span><span class="identifier">offHeap</span><span>.</span><span class="identifier">contains</span><span>(</span><span class="number-literal">17L</span><span>)
 </span><span class="comment">// res5: Boolean = true
@@ -153,31 +193,62 @@
 </span><span class="identifier">offHeap</span><span>.</span><span class="identifier">falsePositiveRate</span><span>()
 </span><span class="comment">// res7: Double = 1.095942196882938E-22
 </span><span class="identifier">offHeap</span><span>.</span><span class="identifier">close</span><span>() </span><span class="comment">// we need to release memory for off-heap BloomFilter</span></code></pre>
-        <div class="callout info">
-          <i class="icofont-laika info">&#xef4e;</i>
-          <p>On Java 22 and newer the off-heap implementation uses the Foreign Function and Memory API. Earlier
-          supported Java versions use an <code>Unsafe</code>-based implementation.</p>
-        </div>
         
         <h2 id="benchmarks" class="section"><a class="anchor-link left" href="#benchmarks"><i class="icofont-laika link">&#xef71;</i></a>Benchmarks</h2>
-        <p>Latest benchmarks (29/08/2026) on an isolated hardware Intel(R) Core(TM) i7-7700 CPU @ 3.60GHz with JDK 25.
-        This is 2/3 times faster the original across implementations.</p>
-        <pre><code>[info] StringItemBenchmark.ffmOffHeapAdd        latin1      1024        10  avgt   45  152.815 ± 0.015  ns/op
-[info] StringItemBenchmark.ffmOffHeapAdd         utf16      1024        10  avgt   45  277.790 ± 0.134  ns/op
-[info] StringItemBenchmark.ffmOffHeapGet        latin1      1024        10  avgt   45  153.407 ± 0.960  ns/op
-[info] StringItemBenchmark.ffmOffHeapGet         utf16      1024        10  avgt   45  276.826 ± 0.055  ns/op
-[info] StringItemBenchmark.originalAdd          latin1      1024        10  avgt   45  524.968 ± 0.452  ns/op
-[info] StringItemBenchmark.originalAdd           utf16      1024        10  avgt   45  523.987 ± 0.471  ns/op
-[info] StringItemBenchmark.originalGet          latin1      1024        10  avgt   45  523.736 ± 0.228  ns/op
-[info] StringItemBenchmark.originalGet           utf16      1024        10  avgt   45  522.841 ± 0.238  ns/op
-[info] StringItemBenchmark.onHeapAdd            latin1      1024        10  avgt   45  151.768 ± 0.039  ns/op
-[info] StringItemBenchmark.onHeapAdd             utf16      1024        10  avgt   45  277.623 ± 0.072  ns/op
-[info] StringItemBenchmark.onHeapGet            latin1      1024        10  avgt   45  150.851 ± 0.026  ns/op
-[info] StringItemBenchmark.onHeapGet             utf16      1024        10  avgt   45  276.940 ± 0.031  ns/op
-[info] StringItemBenchmark.unsafeOffHeapAdd     latin1      1024        10  avgt   45  152.085 ± 0.939  ns/op
-[info] StringItemBenchmark.unsafeOffHeapAdd      utf16      1024        10  avgt   45  275.908 ± 0.166  ns/op
-[info] StringItemBenchmark.unsafeOffHeapGet     latin1      1024        10  avgt   45  151.257 ± 0.646  ns/op
-[info] StringItemBenchmark.unsafeOffHeapGet      utf16      1024        10  avgt   45  274.358 ± 0.085  ns/op</code></pre>
+        <p>Latest benchmarks (06/09/2026) on an isolated hardware Intel(R) Core(TM) i7-7700 CPU @ 3.60GHz with JDK 25.</p>
+        
+        <h3 id="bloomfilter-string-with-defaut-unsafe-string-hash-implementation" class="section"><a class="anchor-link left" href="#bloomfilter-string-with-defaut-unsafe-string-hash-implementation"><i class="icofont-laika link">&#xef71;</i></a><code>BloomFilter[String]</code> with defaut (<code>Unsafe</code>) string hash implementation</h3>
+        <p>This is 2/3 times faster the original across implementations.</p>
+        <pre><code>[info] Benchmark                             (charset)  (length)  (tokens)  Mode  Cnt    Score   Error  Units
+[info] StringItemBenchmark.ffmOffHeapAdd        latin1        32        10  avgt   45   36.458 ± 0.009  ns/op
+[info] StringItemBenchmark.ffmOffHeapAdd        latin1      1024        10  avgt   45  154.724 ± 1.067  ns/op
+[info] StringItemBenchmark.ffmOffHeapAdd         utf16        32        10  avgt   45   40.268 ± 0.008  ns/op
+[info] StringItemBenchmark.ffmOffHeapAdd         utf16      1024        10  avgt   45  278.674 ± 0.096  ns/op
+[info] StringItemBenchmark.ffmOffHeapGet        latin1        32        10  avgt   45   35.620 ± 0.036  ns/op
+[info] StringItemBenchmark.ffmOffHeapGet        latin1      1024        10  avgt   45  152.527 ± 0.015  ns/op
+[info] StringItemBenchmark.ffmOffHeapGet         utf16        32        10  avgt   45   39.285 ± 0.052  ns/op
+[info] StringItemBenchmark.ffmOffHeapGet         utf16      1024        10  avgt   45  277.341 ± 0.106  ns/op
+[info] StringItemBenchmark.onHeapAdd            latin1        32        10  avgt   45   35.061 ± 0.076  ns/op
+[info] StringItemBenchmark.onHeapAdd            latin1      1024        10  avgt   45  152.061 ± 0.052  ns/op
+[info] StringItemBenchmark.onHeapAdd             utf16        32        10  avgt   45   38.951 ± 0.051  ns/op
+[info] StringItemBenchmark.onHeapAdd             utf16      1024        10  avgt   45  277.843 ± 0.033  ns/op
+[info] StringItemBenchmark.onHeapGet            latin1        32        10  avgt   45   34.623 ± 0.081  ns/op
+[info] StringItemBenchmark.onHeapGet            latin1      1024        10  avgt   45  151.576 ± 0.052  ns/op
+[info] StringItemBenchmark.onHeapGet             utf16        32        10  avgt   45   38.414 ± 0.010  ns/op
+[info] StringItemBenchmark.onHeapGet             utf16      1024        10  avgt   45  277.411 ± 0.107  ns/op
+[info] StringItemBenchmark.originalAdd          latin1        32        10  avgt   45   97.985 ± 0.128  ns/op
+[info] StringItemBenchmark.originalAdd          latin1      1024        10  avgt   45  524.308 ± 0.636  ns/op
+[info] StringItemBenchmark.originalAdd           utf16        32        10  avgt   45   97.912 ± 0.141  ns/op
+[info] StringItemBenchmark.originalAdd           utf16      1024        10  avgt   45  524.752 ± 0.647  ns/op
+[info] StringItemBenchmark.originalGet          latin1        32        10  avgt   45   96.307 ± 0.012  ns/op
+[info] StringItemBenchmark.originalGet          latin1      1024        10  avgt   45  524.411 ± 1.445  ns/op
+[info] StringItemBenchmark.originalGet           utf16        32        10  avgt   45   96.273 ± 0.011  ns/op
+[info] StringItemBenchmark.originalGet           utf16      1024        10  avgt   45  524.160 ± 1.370  ns/op
+[info] StringItemBenchmark.unsafeOffHeapAdd     latin1        32        10  avgt   45   34.311 ± 0.010  ns/op
+[info] StringItemBenchmark.unsafeOffHeapAdd     latin1      1024        10  avgt   45  151.183 ± 0.019  ns/op
+[info] StringItemBenchmark.unsafeOffHeapAdd      utf16        32        10  avgt   45   37.925 ± 0.011  ns/op
+[info] StringItemBenchmark.unsafeOffHeapAdd      utf16      1024        10  avgt   45  276.174 ± 0.080  ns/op
+[info] StringItemBenchmark.unsafeOffHeapGet     latin1        32        10  avgt   45   33.767 ± 0.008  ns/op
+[info] StringItemBenchmark.unsafeOffHeapGet     latin1      1024        10  avgt   45  150.913 ± 0.032  ns/op
+[info] StringItemBenchmark.unsafeOffHeapGet      utf16        32        10  avgt   45   37.416 ± 0.025  ns/op
+[info] StringItemBenchmark.unsafeOffHeapGet      utf16      1024        10  avgt   45  275.230 ± 0.093  ns/op</code></pre>
+        
+        <h3 id="string-hash-implementations" class="section"><a class="anchor-link left" href="#string-hash-implementations"><i class="icofont-laika link">&#xef71;</i></a>String hash implementations</h3>
+        <p>We can see that <code>Unsafe</code> and <code>VarHandle</code> has similar performance and both are faster than <code>safe</code> variant.
+        The longer the string, the different performance is getting bigger.</p>
+        <pre><code>[info] Benchmark                 (coder)  (implementation)  (length)  Mode  Cnt    Score   Error  Units
+[info] StringHashBenchmark.hash    ascii            unsafe        32  avgt   45   13.729 ± 0.009  ns/op
+[info] StringHashBenchmark.hash    ascii            unsafe      1024  avgt   45  130.115 ± 0.035  ns/op
+[info] StringHashBenchmark.hash    ascii         varhandle        32  avgt   45   16.852 ± 0.006  ns/op
+[info] StringHashBenchmark.hash    ascii         varhandle      1024  avgt   45  133.443 ± 0.050  ns/op
+[info] StringHashBenchmark.hash    ascii              safe        32  avgt   45   20.825 ± 0.004  ns/op
+[info] StringHashBenchmark.hash    ascii              safe      1024  avgt   45  487.173 ± 0.077  ns/op
+[info] StringHashBenchmark.hash   latin1            unsafe        32  avgt   45   13.725 ± 0.007  ns/op
+[info] StringHashBenchmark.hash   latin1            unsafe      1024  avgt   45  133.165 ± 1.118  ns/op
+[info] StringHashBenchmark.hash   latin1         varhandle        32  avgt   45   16.856 ± 0.009  ns/op
+[info] StringHashBenchmark.hash   latin1         varhandle      1024  avgt   45  133.452 ± 0.022  ns/op
+[info] StringHashBenchmark.hash   latin1              safe        32  avgt   45   20.834 ± 0.007  ns/op
+[info] StringHashBenchmark.hash   latin1              safe      1024  avgt   45  486.233 ± 0.723  ns/op</code></pre>
 
         
 <hr class="footer-rule"/>
