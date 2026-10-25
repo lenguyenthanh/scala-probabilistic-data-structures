@@ -44,7 +44,7 @@ public abstract class HashMatrixSuite {
     Hash<String> acquire() {
       switch (this) {
         case DEFAULT:
-          return (Hash<String>) Hash$.MODULE$.stringHash();
+          return Hash$.MODULE$.stringHash();
         case UNSAFE:
           return Hash.strings$.MODULE$.unsafe();
         case PRIVATE_JDK:
