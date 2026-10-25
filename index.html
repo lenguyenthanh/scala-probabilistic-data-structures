@@ -122,7 +122,7 @@
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">se</span><span>.</span><span class="identifier">thanh</span><span>.</span><span class="identifier">pds</span><span>.</span><span class="identifier">bloomfilter</span><span>.</span><span class="type-name">BloomFilter</span><span>
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">filter</span><span> = </span><span class="type-name">BloomFilter</span><span>[</span><span class="type-name">Long</span><span>](</span><span class="identifier">numberOfItems</span><span> = </span><span class="number-literal">1_000L</span><span>, </span><span class="identifier">falsePositiveRate</span><span> = </span><span class="number-literal">0.01</span><span>)
-</span><span class="comment">// filter: BloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$BloomFilterImpl@4c1c5773
+</span><span class="comment">// filter: BloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$BloomFilterImpl@78c0ece2
 </span><span>
 </span><span class="identifier">filter</span><span>.</span><span class="identifier">add</span><span>(</span><span class="number-literal">17L</span><span>)
 </span><span class="identifier">filter</span><span>.</span><span class="identifier">contains</span><span>(</span><span class="number-literal">17L</span><span>)
@@ -184,7 +184,7 @@
         <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">se</span><span>.</span><span class="identifier">thanh</span><span>.</span><span class="identifier">pds</span><span>.</span><span class="identifier">bloomfilter</span><span>.</span><span class="type-name">BloomFilter</span><span>
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">offHeap</span><span> = </span><span class="type-name">BloomFilter</span><span>.</span><span class="identifier">offHeap</span><span>[</span><span class="type-name">Long</span><span>](</span><span class="number-literal">1_000L</span><span>, </span><span class="number-literal">0.01</span><span>)
-</span><span class="comment">// offHeap: OffHeapBloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$OffHeapBloomFilterImpl@6a56dd59
+</span><span class="comment">// offHeap: OffHeapBloomFilter[Long] = se.thanh.pds.bloomfilter.BloomFilter$OffHeapBloomFilterImpl@1bc82ceb
 </span><span class="identifier">offHeap</span><span>.</span><span class="identifier">add</span><span>(</span><span class="number-literal">17L</span><span>)
 </span><span class="identifier">offHeap</span><span>.</span><span class="identifier">contains</span><span>(</span><span class="number-literal">17L</span><span>)
 </span><span class="comment">// res5: Boolean = true
